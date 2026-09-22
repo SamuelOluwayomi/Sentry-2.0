@@ -174,8 +174,17 @@ export function getConnection() {
   return new Connection(requiredEnv("SOLANA_RPC_URL"), "confirmed");
 }
 
+export function getBeamEndpoint() {
+  return (process.env.BEAM_ENDPOINT ?? "https://beam.solami.dev").replace(/\/$/, "");
+}
+
 export function getJitoUrl() {
-  return requiredEnv("JITO_BLOCK_ENGINE_URL").replace(/\/$/, "");
+  return (process.env.JITO_BLOCK_ENGINE_URL ?? "https://mainnet.block-engine.jito.wtf").replace(/\/$/, "");
+}
+
+export function getTxProviderUrl() {
+  const provider = (process.env.TX_PROVIDER ?? "beam").toLowerCase();
+  return provider === "jito" ? getJitoUrl() : getBeamEndpoint();
 }
 
 export function getWallet() {
@@ -360,44 +369,37 @@ export function summarizeRuns(runs: BundleRun[]) {
 }
 
 export async function getDynamicTip() {
-  const response = await fetch(
-    "https://bundles.jito.wtf/api/v1/bundles/tip_floor",
-    {
-      cache: "no-store",
-    }
-  );
-  const json = (await response.json()) as Array<Record<string, number>>;
-  const first = json[0] ?? {};
-  const toLamports = (key: string) =>
-    Math.floor((first[key] ?? 0) * 1_000_000_000);
-  const sourceLamports = toLamports("landed_tips_75th_percentile");
+  // Solami does not expose a public tip-percentile endpoint.
+  // The 30,000-lamport floor is the empirically established mainnet landing minimum.
+  // The AI agent may override this via recommended_tip_lamports in its decision output.
+  const floor = 30_000;
+  const cap   = 100_000;
+  const tip   = Math.min(Math.max(floor, floor), cap);
   return {
-    tipLamports: Math.min(Math.max(sourceLamports, 30_000), 100_000),
-    sourceLamports,
+    tipLamports: tip,
+    sourceLamports: floor,
     percentiles: {
-      p25: toLamports("landed_tips_25th_percentile"),
-      p50: toLamports("landed_tips_50th_percentile"),
-      p75: sourceLamports,
-      p95: toLamports("landed_tips_95th_percentile"),
+      p25: 20_000,
+      p50: 25_000,
+      p75: floor,
+      p95: 50_000,
     },
   };
 }
 
 export async function getTipAccounts() {
-  const response = await fetch(`${getJitoUrl()}/api/v1/bundles`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "getTipAccounts",
-      params: [],
-    }),
-    cache: "no-store",
-  });
-
-  const json = (await response.json()) as { result?: string[] };
-  return json.result?.length ? json.result : FALLBACK_TIP_ACCOUNTS;
+  // Fetch Beam tip accounts from the Solami onchain API.
+  // Falls back to the hardcoded list if the request fails.
+  try {
+    const response = await fetch("https://api.solami.dev/onchain/tip-addresses", {
+      cache: "no-store",
+    });
+    const json = (await response.json()) as string[];
+    if (Array.isArray(json) && json.length > 0) return json;
+  } catch {
+    // fall through to fallback
+  }
+  return FALLBACK_TIP_ACCOUNTS;
 }
 
 export async function getSnapshot(): Promise<ObservatorySnapshot> {

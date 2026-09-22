@@ -1,18 +1,3 @@
-//! Solami Beam transaction sender.
-//!
-//! Beam is a stake-weighted priority transaction routing service operated by
-//! Solami. It accepts standard base64-encoded Solana transactions over HTTP
-//! using the same JSON-RPC sendTransaction envelope that Solana RPC nodes use,
-//! so the wire format here is identical to the existing Jito sender.
-//!
-//! Tip accounts are fetched from https://api.solami.dev/onchain/tip-addresses.
-//! The tip floor uses the same empirical 30,000-lamport floor derived from
-//! mainnet runs (Beam, like Jito, occasionally underreports the clearing price
-//! through public APIs). The cap is 100,000 lamports.
-//!
-//! The function signature matches jito::build_and_submit_bundle so the caller
-//! in main.rs can dispatch to either sender without changing call-site logic.
-
 use anyhow::{anyhow, Context, Result};
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use bincode;
@@ -27,14 +12,13 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use std::str::FromStr;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 use crate::lifecycle::{BundleRun, BundleStatus};
 
 const MEMO_PROGRAM_ID: &str = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const TIP_ADDRESSES_URL: &str = "https://api.solami.dev/onchain/tip-addresses";
 const TIP_FLOOR_LAMPORTS: u64 = 30_000;
-const TIP_CAP_LAMPORTS: u64 = 100_000;
 
 // Hardcoded fallback tip accounts taken from the live API response.
 // These are the Beam-native accounts (suffixed *beam) plus Solami staking
@@ -56,39 +40,34 @@ const FALLBACK_TIP_ACCOUNTS: &[&str] = &[
 /// Falls back to the hardcoded list if the API is unreachable.
 async fn get_tip_accounts(client: &reqwest::Client) -> Vec<String> {
     match client.get(TIP_ADDRESSES_URL).send().await {
-        Ok(resp) => {
-            match resp.json::<Vec<String>>().await {
-                Ok(accounts) if !accounts.is_empty() => {
-                    info!("Beam tip accounts: {} fetched from API", accounts.len());
-                    accounts
-                }
-                _ => {
-                    warn!("Beam tip account API returned empty list, using fallback");
-                    FALLBACK_TIP_ACCOUNTS.iter().map(|s| s.to_string()).collect()
-                }
+        Ok(resp) => match resp.json::<Vec<String>>().await {
+            Ok(accounts) if !accounts.is_empty() => {
+                info!("Beam tip accounts: {} fetched from API", accounts.len());
+                accounts
             }
-        }
+            _ => {
+                warn!("Beam tip account API returned empty list, using fallback");
+                FALLBACK_TIP_ACCOUNTS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect()
+            }
+        },
         Err(e) => {
             warn!("Beam tip account fetch failed ({}), using fallback", e);
-            FALLBACK_TIP_ACCOUNTS.iter().map(|s| s.to_string()).collect()
+            FALLBACK_TIP_ACCOUNTS
+                .iter()
+                .map(|s| s.to_string())
+                .collect()
         }
     }
 }
 
-/// Calculate the tip amount.
+/// Return the baseline tip.
 ///
-/// Formula: max(TIP_FLOOR_LAMPORTS, base_tip).min(TIP_CAP_LAMPORTS)
-///
-/// The public Solami fee APIs report historical medians that often sit below
-/// the real clearing price. The 30,000-lamport floor was derived empirically
-/// from mainnet runs and represents the minimum that reliably lands.
-pub fn calculate_tip(base_tip: u64) -> u64 {
-    base_tip.max(TIP_FLOOR_LAMPORTS).min(TIP_CAP_LAMPORTS)
-}
-
-/// Get a dynamic tip amount. Currently returns TIP_FLOOR_LAMPORTS as the
-/// baseline since Solami does not expose a public tip-percentile endpoint.
-/// The AI agent's recommended_tip_lamports field overrides this when present.
+/// Solami has no public tip-percentile endpoint. The 30,000-lamport floor
+/// is the empirical Beam landing minimum derived from mainnet runs.
+/// The AI agent overrides this via recommended_tip_lamports when present.
 pub async fn get_dynamic_tip() -> Result<u64> {
     Ok(TIP_FLOOR_LAMPORTS)
 }
@@ -122,8 +101,8 @@ pub async fn build_and_submit_bundle(
     let tip_account = Pubkey::from_str(&tip_account_str)
         .with_context(|| format!("parse tip account pubkey: {}", tip_account_str))?;
 
-    let memo_program = Pubkey::from_str(MEMO_PROGRAM_ID)
-        .expect("hardcoded memo program ID is valid");
+    let memo_program =
+        Pubkey::from_str(MEMO_PROGRAM_ID).expect("hardcoded memo program ID is valid");
 
     info!(
         "Beam sender: tip={} lamports, account={}, memo={}",
@@ -138,11 +117,7 @@ pub async fn build_and_submit_bundle(
     };
 
     // Instruction 2: inline tip transfer.
-    let tip_ix = system_instruction::transfer(
-        &keypair.pubkey(),
-        &tip_account,
-        tip_lamports,
-    );
+    let tip_ix = system_instruction::transfer(&keypair.pubkey(), &tip_account, tip_lamports);
 
     // Fetch a fresh blockhash at confirmed commitment.
     // Using confirmed (not finalized) maximises the validity window.
@@ -153,8 +128,7 @@ pub async fn build_and_submit_bundle(
         warn!("FORCE_EXPIRED_HASH active: using zero blockhash for fault injection");
         solana_sdk::hash::Hash::default()
     } else {
-        rpc.get_latest_blockhash()
-            .context("get_latest_blockhash")?
+        rpc.get_latest_blockhash().context("get_latest_blockhash")?
     };
 
     // Simulate before signing.
@@ -206,11 +180,8 @@ pub async fn build_and_submit_bundle(
     }
 
     // Sign.
-    let message = Message::new_with_blockhash(
-        &[memo_ix, tip_ix],
-        Some(&keypair.pubkey()),
-        &blockhash,
-    );
+    let message =
+        Message::new_with_blockhash(&[memo_ix, tip_ix], Some(&keypair.pubkey()), &blockhash);
     let mut tx = Transaction::new_unsigned(message);
     tx.sign(&[keypair], blockhash);
 
@@ -245,13 +216,20 @@ pub async fn build_and_submit_bundle(
 
     let status_code = resp.status();
     let body_text = resp.text().await.unwrap_or_default();
-    info!("Beam response HTTP {}: {}", status_code, &body_text[..body_text.len().min(200)]);
+    info!(
+        "Beam response HTTP {}: {}",
+        status_code,
+        &body_text[..body_text.len().min(200)]
+    );
 
-    let parsed: serde_json::Value = serde_json::from_str(&body_text)
-        .unwrap_or(serde_json::Value::Null);
+    let parsed: serde_json::Value =
+        serde_json::from_str(&body_text).unwrap_or(serde_json::Value::Null);
 
     if let Some(err) = parsed.get("error") {
-        let msg = err["message"].as_str().unwrap_or("beam_rejection").to_string();
+        let msg = err["message"]
+            .as_str()
+            .unwrap_or("beam_rejection")
+            .to_string();
         error!("Beam rejected transaction: {}", msg);
         let mut fail = BundleRun::new(
             String::new(),
@@ -263,7 +241,11 @@ pub async fn build_and_submit_bundle(
         );
         fail.error_reason = Some(msg.clone());
         fail.classify_failure(
-            if msg.to_lowercase().contains("tip") { "zero_tip" } else { "jito_rejection" },
+            if msg.to_lowercase().contains("tip") {
+                "zero_tip"
+            } else {
+                "jito_rejection"
+            },
             "submission",
             "Check tip amount is above Beam minimum (30,000 lamports)",
         );

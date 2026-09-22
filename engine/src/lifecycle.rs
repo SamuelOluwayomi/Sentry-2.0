@@ -146,7 +146,7 @@ pub fn log_run(run: &BundleRun) {
 /// Poll Solana RPC at each commitment level to build the full lifecycle timeline.
 /// Tracks: Processed -> Confirmed -> Finalized with timestamps and slot numbers.
 pub async fn track_bundle(
-    jito_url: &str,
+    tx_provider_url: &str,
     rpc_url: &str,
     yellowstone_endpoint: Option<&str>,
     yellowstone_token: Option<&str>,
@@ -289,11 +289,14 @@ pub async fn track_bundle(
             }
         }
 
-        // 2. If not yet processed, also check Jito inflight status for early signals
-        if run.processed_at.is_none() {
+        // 2. If not yet processed, check provider-specific inflight status.
+        // This is only available for Jito (getInflightBundleStatuses).
+        // Beam uses the Solana RPC confirmation path exclusively.
+        let is_jito = tx_provider_url.contains("jito") || tx_provider_url.contains("block-engine");
+        if run.processed_at.is_none() && is_jito {
             let inflight_url = format!(
                 "{}/api/v1/getInflightBundleStatuses",
-                jito_url.trim_end_matches('/')
+                tx_provider_url.trim_end_matches('/')
             );
             let body = serde_json::json!({
                 "jsonrpc": "2.0",
@@ -312,12 +315,12 @@ pub async fn track_bundle(
                             match status_str {
                                 "Failed" => {
                                     error!(
-                                        "Jito marked bundle as Failed (poll {}/{})",
+                                        "Provider marked bundle as Failed (poll {}/{})",
                                         attempt, max_polls
                                     );
                                     run.status = BundleStatus::Failed;
                                     run.error_reason =
-                                        Some("Jito block engine rejected bundle".to_string());
+                                        Some("Block engine rejected bundle".to_string());
                                     run.classify_failure(
                                         "jito_rejection",
                                         "block_engine",
@@ -330,17 +333,16 @@ pub async fn track_bundle(
                                         .pointer("/result/value/0/landed_slot")
                                         .and_then(|s| s.as_u64());
                                     info!(
-                                        "Jito reports Landed at slot {:?} (poll {}/{})",
+                                        "Provider reports Landed at slot {:?} (poll {}/{})",
                                         slot, attempt, max_polls
                                     );
                                     if let Some(s) = slot {
                                         run.landed_slot = Some(s);
                                     }
-                                    // Continue polling Solana RPC for commitment progression
                                 }
                                 "Pending" => {
                                     info!(
-                                        "Jito: bundle still Pending (poll {}/{})",
+                                        "Provider: bundle still Pending (poll {}/{})",
                                         attempt, max_polls
                                     );
                                 }
@@ -350,7 +352,7 @@ pub async fn track_bundle(
                     }
                 }
                 Err(e) => {
-                    warn!("HTTP error polling Jito inflight: {}", e);
+                    warn!("HTTP error polling provider inflight status: {}", e);
                 }
             }
         }
@@ -379,7 +381,7 @@ pub async fn track_bundle(
             run.classify_failure(
                 "not_landed",
                 "submission",
-                "Check blockhash freshness and Jito leader availability",
+                "Check blockhash freshness and provider leader availability",
             );
         }
     }

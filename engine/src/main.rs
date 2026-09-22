@@ -107,7 +107,11 @@ async fn main() -> Result<()> {
         // Gate submission on leader window proximity.
         // Hold until we are within 2 slots of the nearest Jito leader.
         // This is a best-effort check — if no schedule is available we proceed immediately.
-        wait_for_leader_window(Arc::clone(&slot_state), &config.jito_block_engine_url).await;
+        // Leader window gating is only required for Jito.
+        // Beam handles leader routing internally; we submit immediately.
+        if config.tx_provider == config::TxProvider::Jito {
+            wait_for_leader_window(Arc::clone(&slot_state), &config.jito_block_engine_url).await;
+        }
 
         // Determine tip and failure injection
         let (tip_lamports, memo_text, intentional_failure) = if std::env::var("FAIL_TEST").as_deref() == Ok("zero-tip") {
@@ -239,8 +243,12 @@ async fn main() -> Result<()> {
                         (Some(config.yellowstone_endpoint()), Some(config.yellowstone_token()))
                     };
 
+                    let provider_url = match config.tx_provider {
+                        config::TxProvider::Beam => config.beam_endpoint.as_str(),
+                        config::TxProvider::Jito => config.jito_block_engine_url.as_str(),
+                    };
                     lifecycle::track_bundle(
-                        &config.jito_block_engine_url,
+                        provider_url,
                         &config.solana_rpc_url,
                         ys_ep,
                         ys_tok,
@@ -330,8 +338,12 @@ async fn main() -> Result<()> {
 
                             if retry_run.status == lifecycle::BundleStatus::Submitted {
                                 let bid = retry_run.bundle_id.clone();
+                                let retry_provider_url = match config.tx_provider {
+                                    config::TxProvider::Beam => config.beam_endpoint.as_str(),
+                                    config::TxProvider::Jito => config.jito_block_engine_url.as_str(),
+                                };
                                 lifecycle::track_bundle(
-                                    &config.jito_block_engine_url,
+                                    retry_provider_url,
                                     &config.solana_rpc_url,
                                     Some(config.yellowstone_endpoint()),
                                     Some(config.yellowstone_token()),

@@ -2,7 +2,7 @@
 
 A Solana infrastructure project built for the Superteam Nigeria **Advanced Infrastructure Challenge: Build a Smart Transaction Stack** bounty.
 
-Sentry is a full-stack transaction operations system. It streams live Solana network state via Yellowstone gRPC, constructs and submits Jito-powered mainnet transactions, tracks each submission through its multi-stage commitment lifecycle (`Processed` -> `Confirmed` -> `Finalized`), and deploys an autonomous AI agent to make real-time tip adjustment, retry, and hold decisions based on observed network risk.
+Sentry 2.0 is a full-stack transaction operations system built on Solami infrastructure. It streams live Solana network state via Solami Yellowstone gRPC, constructs and submits transactions through Solami Beam (stake-weighted SWQoS routing), tracks each submission through its multi-stage commitment lifecycle (`Processed` -> `Confirmed` -> `Finalized`), and deploys an autonomous AI agent to make real-time tip adjustment, retry, and hold decisions based on observed network state.
 
 ## Project Resources
 
@@ -21,18 +21,18 @@ Sentry is composed of four decoupled services that communicate through shared fi
 
 ```
                       +---------------------------+
-                      |  SolInfra Yellowstone gRPC |
-                      |  (Tx Status Stream ONLY)   |
+                      |  Solami Yellowstone gRPC   |
+                      |  grpc.solami.dev           |
                       +-------------+-------------+
                                     |
                                     v
 +------------------+    +-----------+-----------+    +--------------------+
-|  Jito Block      |<-->|  Rust Engine (engine/) |    |  Solana Mainnet    |
-|  Engine HTTP RPC |    |  - Slot RPC polling    |<-->|  RPC (getSlot 400m)|
-|  /api/v1/*       |    |  - Bundle construction |    |  getSignatureStatus|
+|  Solami Beam     |<-->|  Rust Engine (engine/) |    |  Solana Mainnet    |
+|  (SWQoS routing) |    |  - Slot RPC polling    |<-->|  Solami RPC        |
+|  beam.solami.dev |    |  - Tx construction     |    |  rpc.solami.dev    |
 +------------------+    |  - Lifecycle tracking  |    +--------------------+
-                        |  - Auto-retry logic    |
-                        +-----------+------------+
+  Jito (fallback)       |  - Auto-retry logic    |
+  TX_PROVIDER=jito      +-----------+------------+
                                     |
                       writes lifecycle_log.jsonl
                       writes agent_decisions.jsonl
@@ -865,3 +865,34 @@ During testing, separate `addTipTx()` bundle structures (where the tip is a stan
 - [x] Operational Learnings section documenting 6 named mainnet insights
 - [x] 12 successful verifiable mainnet submissions with Solscan links
 - [x] 2 intentional failure runs classified (zero-tip + expired-hash)
+
+
+---
+
+## Sentry 2.0 Changes
+
+Sentry 2.0 migrates the entire infrastructure layer from SolInfra and Jito to the Solami stack while keeping Jito available as a fallback.
+
+### Infrastructure
+
+| Component | v1 (SolInfra / Jito) | v2 (Solami) |
+|---|---|---|
+| RPC | Public Solana mainnet | `rpc.solami.dev` (private bare-metal) |
+| Yellowstone gRPC | `grpc.solinfra.dev` | `grpc.solami.dev` |
+| Transaction landing | Jito block engine bundles | Solami Beam (SWQoS, stake-weighted) |
+| Tip accounts | Jito tip addresses | `api.solami.dev/onchain/tip-addresses` |
+| Tip floor source | `bundles.jito.wtf/api/v1/bundles/tip_floor` | Empirical floor (30,000 lamports) |
+
+### Provider Abstraction
+
+The `TX_PROVIDER` environment variable controls which sender the engine uses at runtime:
+
+- `TX_PROVIDER=beam` (default) — routes through Solami Beam
+- `TX_PROVIDER=jito` — routes through Jito block engine (original behaviour)
+
+All other configuration is backward-compatible. Legacy `YELLOWSTONE_ENDPOINT` and `YELLOWSTONE_TOKEN` env var names are still accepted alongside the new `GRPC_ENDPOINT` / `GRPC_TOKEN` names.
+
+### Tip logic
+
+Beam submissions use a single inline-tip transaction (memo + system transfer to a randomly selected Beam tip account). The minimum is 30,000 lamports; the AI agent's `recommended_tip_lamports` output raises this when network congestion warrants it.
+

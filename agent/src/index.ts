@@ -163,18 +163,17 @@ function readLifecycleLog(): BundleRun[] {
 }
 
 async function fetchTipFloor(): Promise<TipFloorEntry | null> {
-  try {
-    const resp = await fetch(
-      "https://bundles.jito.wtf/api/v1/bundles/tip_floor",
-      {
-        signal: AbortSignal.timeout(8000),
-      }
-    );
-    const json = (await resp.json()) as TipFloorEntry[];
-    return json[0] ?? null;
-  } catch {
-    return null;
-  }
+  // Solami does not expose a public tip-percentile endpoint.
+  // Return a synthetic entry built from the empirical 30,000-lamport floor.
+  // The AI agent may raise this value via recommended_tip_lamports.
+  const floorSol = 30_000 / 1_000_000_000;
+  return {
+    landed_tips_25th_percentile: floorSol * 0.67,
+    landed_tips_50th_percentile: floorSol * 0.83,
+    landed_tips_75th_percentile: floorSol,
+    landed_tips_95th_percentile: floorSol * 1.67,
+    ema_landed_tips_50th_percentile: floorSol * 0.83,
+  };
 }
 
 async function fetchSlot(): Promise<number | null> {
