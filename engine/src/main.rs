@@ -1,3 +1,4 @@
+mod beam;
 mod config;
 mod geyser;
 mod jito;
@@ -86,7 +87,7 @@ async fn main() -> Result<()> {
     //  Bundle submission loop
     // ===================================================================
     info!("===============================================");
-    info!("  Phase: Jito Bundle Submission");
+    info!("  Phase: Bundle Submission");
     info!("===============================================");
 
     let total_runs: u32 = std::env::var("RUN_COUNT")
@@ -114,7 +115,10 @@ async fn main() -> Result<()> {
             (0u64, "Sentry | FAIL TEST: zero tip", true)
         } else if std::env::var("FAIL_TEST").as_deref() == Ok("expired-hash") {
             info!("FAIL TEST MODE: Forcing expired blockhash (expired-hash failure)");
-            let tip = jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000);
+            let tip = match config.tx_provider {
+                config::TxProvider::Beam => beam::get_dynamic_tip().await.unwrap_or(30_000),
+                config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000),
+            };
             (tip, "Sentry | FAIL TEST: expired blockhash", true)
         } else if total_runs >= 2 && run_num == total_runs - 1 {
             info!("INTENTIONAL FAILURE: tip = 0 lamports (below minimum)");
@@ -123,7 +127,10 @@ async fn main() -> Result<()> {
             info!("INTENTIONAL FAILURE: tip = 1 lamport (below floor)");
             (1u64, "Sentry | FAIL TEST: micro tip", true)
         } else {
-            let tip = jito::get_dynamic_tip(&config.solana_rpc_url).await?;
+            let tip = match config.tx_provider {
+                config::TxProvider::Beam => beam::get_dynamic_tip().await?,
+                config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url).await?,
+            };
             (tip, "Sentry | bounty demo", false)
         };
 
@@ -135,8 +142,8 @@ async fn main() -> Result<()> {
         let (ready_tx, ready_rx) = tokio::sync::oneshot::channel::<()>();
         let (sig_tx, sig_rx) = tokio::sync::oneshot::channel::<String>();
 
-        let ys_endpoint = config.yellowstone_endpoint.clone();
-        let ys_token = config.yellowstone_token.clone();
+        let ys_endpoint = config.yellowstone_endpoint().to_string();
+        let ys_token = config.yellowstone_token().to_string();
 
         let watch_handle = tokio::spawn(async move {
             // Wait for caller to tell us the real signature
@@ -154,21 +161,37 @@ async fn main() -> Result<()> {
             .await
         });
 
-        // Submit the bundle
-        let result = jito::build_and_submit_bundle(
-            &config.solana_rpc_url,
-            &config.jito_block_engine_url,
-            &keypair,
-            tip_lamports,
-            run_num,
-            memo_text,
-        )
-        .await;
+        // Submit the bundle via the configured provider.
+        let result = match config.tx_provider {
+            config::TxProvider::Beam => {
+                beam::build_and_submit_bundle(
+                    &config.solana_rpc_url,
+                    &config.beam_endpoint,
+                    &keypair,
+                    tip_lamports,
+                    run_num,
+                    memo_text,
+                )
+                .await
+            }
+            config::TxProvider::Jito => {
+                jito::build_and_submit_bundle(
+                    &config.solana_rpc_url,
+                    &config.jito_block_engine_url,
+                    &keypair,
+                    tip_lamports,
+                    run_num,
+                    memo_text,
+                )
+                .await
+            }
+        };
 
         match result {
             Ok(mut run) => {
-                // Record the slot at time of submission
+                // Record the slot and provider at time of submission
                 run.submit_slot = Some(slot_state.latest_slot.load(Ordering::Relaxed));
+                run.confirmation_source = Some(format!("pending:{}", config.tx_provider.name()));
 
                 // Send signature to the watcher task
                 let _ = sig_tx.send(run.signature.clone());
@@ -213,7 +236,7 @@ async fn main() -> Result<()> {
                     let (ys_ep, ys_tok) = if yellowstone_confirmed {
                         (None, None)
                     } else {
-                        (Some(config.yellowstone_endpoint.as_str()), Some(config.yellowstone_token.as_str()))
+                        (Some(config.yellowstone_endpoint()), Some(config.yellowstone_token()))
                     };
 
                     lifecycle::track_bundle(
@@ -272,18 +295,34 @@ async fn main() -> Result<()> {
                     run.recovery = Some("Autonomous retry with fresh blockhash and recalculated tip".to_string());
 
                     // Recalculate tip for the retry
-                    let retry_tip = jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000);
+                    let retry_tip = match config.tx_provider {
+                    config::TxProvider::Beam => beam::get_dynamic_tip().await.unwrap_or(30_000),
+                    config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000),
+                };
                     info!("Retry tip: {} lamports", retry_tip);
 
-                    let retry_result = jito::build_and_submit_bundle(
-                        &config.solana_rpc_url,
-                        &config.jito_block_engine_url,
-                        &keypair,
-                        retry_tip,
-                        run_num,
-                        "Smart TX Observatory | auto-retry",
-                    )
-                    .await;
+                    let retry_result = match config.tx_provider {
+                        config::TxProvider::Beam => {
+                            beam::build_and_submit_bundle(
+                                &config.solana_rpc_url,
+                                &config.beam_endpoint,
+                                &keypair,
+                                retry_tip,
+                                run_num,
+                                "Sentry | auto-retry",
+                            ).await
+                        }
+                        config::TxProvider::Jito => {
+                            jito::build_and_submit_bundle(
+                                &config.solana_rpc_url,
+                                &config.jito_block_engine_url,
+                                &keypair,
+                                retry_tip,
+                                run_num,
+                                "Sentry | auto-retry",
+                            ).await
+                        }
+                    };
 
                     match retry_result {
                         Ok(mut retry_run) => {
@@ -294,8 +333,8 @@ async fn main() -> Result<()> {
                                 lifecycle::track_bundle(
                                     &config.jito_block_engine_url,
                                     &config.solana_rpc_url,
-                                    Some(&config.yellowstone_endpoint),
-                                    Some(&config.yellowstone_token),
+                                    Some(config.yellowstone_endpoint()),
+                                    Some(config.yellowstone_token()),
                                     &bid,
                                     &mut retry_run,
                                     15,
