@@ -64,20 +64,12 @@ async fn get_tip_accounts(client: &reqwest::Client) -> Vec<String> {
 }
 
 /// Return the baseline tip.
-///
-/// Solami has no public tip-percentile endpoint. The 30,000-lamport floor
-/// is the empirical Beam landing minimum derived from mainnet runs.
-/// The AI agent overrides this via recommended_tip_lamports when present.
 pub async fn get_dynamic_tip() -> Result<u64> {
     Ok(TIP_FLOOR_LAMPORTS)
 }
 
 /// Build a transaction containing a memo instruction and an inline tip transfer,
-/// then submit it to Solami Beam.
-///
-/// The inline-tip pattern packs both instructions into a single transaction,
-/// which avoids the multi-transaction bundle failure mode seen with separate
-/// tip transactions at low tip amounts.
+
 pub async fn build_and_submit_bundle(
     rpc_url: &str,
     beam_endpoint: &str,
