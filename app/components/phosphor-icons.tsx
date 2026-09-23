@@ -133,3 +133,12 @@ export const Copy = createIcon([
   { type: "rect", attrs: { x: 9, y: 9, width: 11, height: 11, rx: 1 } },
   { d: "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" },
 ]);
+
+export const X = createIcon([
+  { d: "M18 6 6 18M6 6l12 12" },
+]);
+
+export const CheckCircle = createIcon([
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
+  { d: "m9 12 2 2 4-4" },
+]);
