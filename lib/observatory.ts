@@ -182,14 +182,42 @@ export function getJitoUrl() {
   return (process.env.JITO_BLOCK_ENGINE_URL ?? "https://mainnet.block-engine.jito.wtf").replace(/\/$/, "");
 }
 
+function getTxProvider(): string {
+  return (process.env.TX_PROVIDER ?? "beam").toLowerCase() === "jito" ? "Jito" : "Beam";
+}
+
 export function getTxProviderUrl() {
   const provider = (process.env.TX_PROVIDER ?? "beam").toLowerCase();
   return provider === "jito" ? getJitoUrl() : getBeamEndpoint();
 }
 
+function decodeSecretKey(raw: string): Uint8Array {
+  if (raw.startsWith("[")) {
+    return Uint8Array.from(JSON.parse(raw) as number[]);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const bs58 = require("bs58");
+  const decodeFn =
+    typeof bs58.decode === "function"
+      ? bs58.decode
+      : (bs58.default?.decode as ((s: string) => Uint8Array) | undefined);
+  if (!decodeFn) {
+    throw new Error("Base58 decoder function is unavailable");
+  }
+  const decoded = decodeFn(raw);
+  if (decoded.length === 64) {
+    return decoded;
+  }
+  if (decoded.length === 32) {
+    return Keypair.fromSeed(decoded).secretKey;
+  }
+  return decoded;
+}
+
 export function getWallet() {
-  const secret = JSON.parse(requiredEnv("WALLET_PRIVATE_KEY")) as number[];
-  return Keypair.fromSecretKey(Uint8Array.from(secret));
+  const raw = requiredEnv("WALLET_PRIVATE_KEY").trim();
+  const bytes = decodeSecretKey(raw);
+  return Keypair.fromSecretKey(bytes);
 }
 
 export async function readLifecycleRuns(): Promise<BundleRun[]> {
@@ -450,21 +478,23 @@ export async function getSnapshot(): Promise<ObservatorySnapshot> {
     tipPercentiles = tip.percentiles;
     jitoTipAccounts = accounts.length;
     health.push({
-      label: "Jito",
+      label: "Beam",
       ok: true,
       detail: `${accounts.length} tip accounts`,
     });
   } catch (error) {
     const detail =
-      error instanceof Error ? error.message : "Failed to read Jito data";
+      error instanceof Error ? error.message : "Failed to read Beam tip data";
     errors.push(detail);
     health.push({ label: "Jito", ok: false, detail });
   }
 
+  const grpcEndpoint = env("GRPC_ENDPOINT") ?? env("YELLOWSTONE_ENDPOINT");
+  const grpcToken    = env("GRPC_TOKEN")    ?? env("YELLOWSTONE_TOKEN");
   health.push({
     label: "Yellowstone",
-    ok: Boolean(env("YELLOWSTONE_ENDPOINT") && env("YELLOWSTONE_TOKEN")),
-    detail: env("YELLOWSTONE_ENDPOINT") ? "configured" : "missing env",
+    ok: Boolean(grpcEndpoint && grpcToken),
+    detail: grpcEndpoint ? "configured" : "missing env",
   });
   health.push({
     label: "Groq",
@@ -570,7 +600,7 @@ async function getAgentDecision(
       ),
       confidence: 0.54,
       reason:
-        "GROQ_API_KEY is not set, so the local policy used the live Jito floor.",
+        "GROQ_API_KEY is not set, so the local policy used the live tip floor.",
       observed_risk: "AI unavailable",
     });
   }
@@ -665,7 +695,7 @@ async function getAgentDecision(
           input.baseTipLamports
         ),
         confidence: Math.min(Math.max(Number(parsed.confidence ?? 0.6), 0), 1),
-        reason: String(parsed.reason ?? "Model selected the live Jito floor."),
+        reason: String(parsed.reason ?? "Model selected the live tip floor."),
         observed_risk: String(
           parsed.observed_risk ?? "No unusual risk detected."
         ),
@@ -708,7 +738,7 @@ async function getAgentDecision(
     ),
     confidence: 0.5,
     reason:
-      "All Groq model attempts failed, so the local policy used the live Jito floor.",
+      "All Groq model attempts failed, so the local policy used the live tip floor.",
     observed_risk: lastError || "Groq model chain unavailable",
   });
 }
@@ -853,7 +883,7 @@ export async function submitBundle(
   await onLog?.({
     level: "info",
     message:
-      "Fetching live Jito tip floor, tip accounts, and lifecycle history",
+      "Fetching live tip floor, tip accounts, and lifecycle history",
     data: { stage: "preflight" },
   });
   const [tip, tipAccounts, runs] = await Promise.all([
@@ -865,7 +895,7 @@ export async function submitBundle(
     level: "info",
     message: `Dynamic tip floor selected: ${tip.tipLamports} lamports`,
     data: {
-      jitoP75Lamports: tip.sourceLamports,
+      tipSourceLamports: tip.sourceLamports,
       tipAccounts: tipAccounts.length,
       priorRuns: runs.length,
     },
@@ -1023,8 +1053,8 @@ export async function submitBundle(
 
   await onLog?.({
     level: "info",
-    message: "Submitting transaction to Jito via sendTransaction",
-    data: { stage: "jito-submit" },
+    message: `Submitting transaction via ${getTxProvider()} sendTransaction`,
+    data: { stage: "beam-submit" },
   });
   const response = await fetch(`${getJitoUrl()}/api/v1/transactions`, {
     method: "POST",
@@ -1045,7 +1075,7 @@ export async function submitBundle(
   const signature = json.result ?? tx.signature?.toString("base64") ?? "";
   await onLog?.({
     level: response.ok ? "success" : "warn",
-    message: `Jito HTTP ${response.status}: ${JSON.stringify(json)}`,
+    message: `${getTxProvider()} HTTP ${response.status}: ${JSON.stringify(json)}`,
     data: {
       bundleId,
       signature,
@@ -1061,7 +1091,7 @@ export async function submitBundle(
       status: "Invalid",
       submitted_at: new Date().toISOString(),
       landed_at: null,
-      error_reason: `${json.error.code ?? "unknown"}: ${json.error.message ?? "Jito rejected transaction"}`,
+      error_reason: `${json.error.code ?? "unknown"}: ${json.error.message ?? "transaction rejected"}`,
       run_number: runNumber,
       profile,
       ai_decision_id: decision.id,
@@ -1069,12 +1099,12 @@ export async function submitBundle(
         status: "Invalid",
         profile,
         error: `${json.error.code ?? "unknown"}: ${json.error.message ?? ""}`,
-        stage: "Jito Rejection",
+        stage: "TX Rejection",
       }),
     });
     await onLog?.({
       level: "error",
-      message: `Jito rejected transaction; logged run #${runNumber}`,
+      message: `Transaction rejected; logged run #${runNumber}`,
     });
     if (options.enableAiRetry || profile === "ai-retry-test") {
       await onLog?.({

@@ -172,7 +172,6 @@ async function fetchTipFloor(): Promise<TipFloorEntry | null> {
     landed_tips_50th_percentile: floorSol * 0.83,
     landed_tips_75th_percentile: floorSol,
     landed_tips_95th_percentile: floorSol * 1.67,
-    ema_landed_tips_50th_percentile: floorSol * 0.83,
   };
 }
 

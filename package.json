@@ -4,13 +4,13 @@
     "sentry": "./cli.js"
   },
   "scripts": {
-    "build": "next build",
+    "build": "NODE_OPTIONS='--dns-result-order=ipv4first' next build",
     "ci": "npm run build && npm run lint && npm run format:check",
-    "dev": "next dev",
+    "dev": "NODE_OPTIONS='--dns-result-order=ipv4first' next dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint",
-    "start": "next start",
+    "start": "NODE_OPTIONS='--dns-result-order=ipv4first' next start",
     "cli": "node cli.js",
     "server": "npx tsx server.ts",
     "harness:faults": "npx tsx scripts/harnesses/harness_faults.ts",
