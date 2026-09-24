@@ -1,46 +1,49 @@
-/**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
- */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Fraunces', Georgia, serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, monospace;
+  --ifm-color-primary: #FF5A26;
+  --ifm-color-primary-dark: #E84D1C;
+  --ifm-color-primary-darker: #D84213;
+  --ifm-color-primary-darkest: #B8340B;
+  --ifm-color-primary-light: #FF6E3F;
+  --ifm-color-primary-lighter: #FF7F55;
+  --ifm-color-primary-lightest: #FFA585;
+  --ifm-code-font-size: 92%;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 90, 38, 0.1);
+  --ifm-background-color: #F7F4EC;
+  --ifm-navbar-background-color: #F7F4EC;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Fraunces', Georgia, serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, monospace;
+  --ifm-color-primary: #FF5A26;
+  --ifm-color-primary-dark: #E84D1C;
+  --ifm-color-primary-darker: #D84213;
+  --ifm-color-primary-darkest: #B8340B;
+  --ifm-color-primary-light: #FF6E3F;
+  --ifm-color-primary-lighter: #FF7F55;
+  --ifm-color-primary-lightest: #FFA585;
+  --docusaurus-highlighted-code-line-bg: rgba(255, 90, 38, 0.2);
 }
 
-/* ─── Logo ──────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6, .navbar__title {
+  font-family: 'Fraunces', Georgia, serif !important;
+}
+
 /* Invert white logo in light mode so it reads dark */
 html[data-theme='light'] .custom-logo {
   filter: invert(1);
 }
 
-/* Keep white logo in dark mode as-is */
 html[data-theme='dark'] .custom-logo {
   filter: none;
 }
 
-/* Override Docusaurus default 32px logo constraint */
 .navbar__logo {
   height: 2rem !important;
   margin-right: 0.35rem;
@@ -49,86 +52,31 @@ html[data-theme='dark'] .custom-logo {
 .navbar__logo img,
 .custom-logo {
   height: 2rem !important;
-  max-height: 2rem !important;
-  width: auto !important;
-  object-fit: contain !important;
+  width: auto;
+  object-fit: contain;
 }
 
-/* ─── Code Blocks ────────────────────────────────── */
-
-/* Outer wrapper */
-.theme-code-block {
-  border-radius: 8px !important;
-  overflow: hidden !important;
-  margin: 1.25rem 0 !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18) !important;
-  border: 1px solid var(--ifm-color-emphasis-300) !important;
+.navbar {
+  border-bottom: 2px solid #121212 !important;
 }
 
-/* Pre/code area */
-.theme-code-block pre {
-  border-radius: 0 !important;
-  margin: 0 !important;
-  padding: 1.1rem 1.25rem !important;
-  font-size: 0.82rem !important;
-  line-height: 1.65 !important;
-}
-
-/* Language label tab above the block */
-.theme-code-block-highlighted-line {
-  display: block;
-  background-color: rgba(255, 255, 0, 0.1);
-  margin: 0 -1.25rem;
-  padding: 0 1.25rem;
-}
-
-/* Copy button */
-.theme-code-block button[class*="copyButton"] {
-  border-radius: 4px !important;
-  opacity: 0.7;
-  transition: opacity 0.15s;
-}
-.theme-code-block button[class*="copyButton"]:hover {
-  opacity: 1;
-}
-
-/* Light mode: left accent stripe + warm background */
 html[data-theme='light'] .theme-code-block {
-  border-left: 4px solid #2e8555 !important;
-  background-color: #f9f9fb !important;
+  border-left: 4px solid #FF5A26 !important;
+  background-color: #FFFFFF !important;
+  border: 2px solid #121212;
 }
 
-html[data-theme='light'] .theme-code-block pre {
-  background-color: #f6f8fa !important;
-}
-
-/* Dark mode: left accent stripe + VS Code-like background */
 html[data-theme='dark'] .theme-code-block {
-  border-left: 4px solid #25c2a0 !important;
-  background-color: #1e1e1e !important;
+  border-left: 4px solid #FF5A26 !important;
+  background-color: #121212 !important;
 }
 
-html[data-theme='dark'] .theme-code-block pre {
-  background-color: #1e1e1e !important;
-}
-
-/* ─── Inline code ────────────────────────────────── */
 html[data-theme='light'] code:not([class*='language-']) {
-  background-color: #e8f4e8;
-  color: #1a6b3c;
-  border: 1px solid #c3dcc3;
+  background-color: #FFFFFF;
+  color: #FF5A26;
+  border: 1px solid #121212;
   border-radius: 4px;
   padding: 0.1em 0.4em;
-  font-size: 0.83em;
-  font-weight: 600;
-}
-
-html[data-theme='dark'] code:not([class*='language-']) {
-  background-color: #2a3a2a;
-  color: #7ec8a0;
-  border: 1px solid #3d5c3d;
-  border-radius: 4px;
-  padding: 0.1em 0.4em;
-  font-size: 0.83em;
-  font-weight: 600;
+  font-size: 0.85em;
+  font-weight: 700;
 }

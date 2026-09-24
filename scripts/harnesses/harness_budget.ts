@@ -41,7 +41,7 @@ async function main() {
   console.log(`- Jito Dynamic Tip: ${tipVal} lamports`);
   console.log(`- Remaining Session Budget: ${c.yellow}${remainingBudget} lamports${c.reset}`);
   await sleep(1500);
-  console.log(`${c.green}✔ Transaction landed successfully!${c.reset}\n`);
+  console.log(`${c.green}[OK] Transaction landed successfully!${c.reset}\n`);
   await sleep(1000);
 
   // ---- Run 2: Volatility / Congestion Spike ----
@@ -54,16 +54,16 @@ async function main() {
   remainingBudget -= tipVal;
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: High congestion, p75 tip floor is 80k.\n` +
-    `  ↳ Budget Check: p75 (80k) < remaining_budget (90k). Allowed.\n` +
-    `  ↳ Action: SUBMIT with tip 80,000 lamports.\n` +
-    `  ↳ Confidence: 92%`,
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: High congestion, p75 tip floor is 80k.\n` +
+    `  -> Budget Check: p75 (80k) < remaining_budget (90k). Allowed.\n` +
+    `  -> Action: SUBMIT with tip 80,000 lamports.\n` +
+    `  -> Confidence: 92%`,
     10
   );
   console.log(`- Remaining Session Budget: ${c.yellow}${remainingBudget} lamports${c.reset}`);
   await sleep(1500);
-  console.log(`${c.green}✔ Transaction landed!${c.reset}\n`);
+  console.log(`${c.green}[OK] Transaction landed!${c.reset}\n`);
   await sleep(1000);
 
   // ---- Run 3: Budget Exhausted ----
@@ -73,11 +73,11 @@ async function main() {
   await sleep(2000);
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: Next Jito floor tip (40k) exceeds remaining session tip budget (10k).\n` +
-    `  ↳ Action: ABORT/HOLD. Further submissions would violate security budget parameters.\n` +
-    `  ↳ Safety Guardrail: Transaction blocked dynamically. No SOL spent.\n` +
-    `  ↳ Confidence: 100%`,
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: Next Jito floor tip (40k) exceeds remaining session tip budget (10k).\n` +
+    `  -> Action: ABORT/HOLD. Further submissions would violate security budget parameters.\n` +
+    `  -> Safety Guardrail: Transaction blocked dynamically. No SOL spent.\n` +
+    `  -> Confidence: 100%`,
     10
   );
 

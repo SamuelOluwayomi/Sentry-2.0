@@ -31,7 +31,7 @@ async function main() {
 
   const sentry = new Sentry();
   const init = await sentry.start();
-  console.log(`${c.green}✔ Sentry SDK warmed up.${c.reset}`);
+  console.log(`${c.green}[OK] Sentry SDK warmed up.${c.reset}`);
   console.log(`- Connected Wallet: ${c.cyan}${init.wallet}${c.reset}`);
   console.log(`- Hot Wallet Balance: ${c.cyan}${init.balanceSol.toFixed(6)} SOL${c.reset}\n`);
 
@@ -46,11 +46,11 @@ async function main() {
   console.log(`${c.bold}[Scenario 1/4] Executing Happy Path Swap/Transfer...${c.reset}`);
   const s1 = await sentry.submit([instruction], { urgency: "medium" });
   if (s1.success) {
-    console.log(`${c.green}✔ Transaction landed successfully at slot ${s1.slot}!${c.reset}`);
+    console.log(`${c.green}[OK] Transaction landed successfully at slot ${s1.slot}!${c.reset}`);
     console.log(`- Signature: ${c.cyan}${s1.signature}${c.reset}`);
     console.log(`- Jito Bundle ID: ${c.cyan}${s1.bundleId}${c.reset}`);
   } else {
-    console.log(`${c.red}✘ Transaction failed: ${s1.error}${c.reset}`);
+    console.log(`${c.red}[ERR] Transaction failed: ${s1.error}${c.reset}`);
   }
   console.log();
   await sleep(2000);
@@ -59,16 +59,16 @@ async function main() {
   console.log(`${c.bold}[Scenario 2/4] Injecting Low Tip (Zero Tip) Failure...${c.reset}`);
   console.log(`- Forcing profile ${c.yellow}'zero-tip-failure'${c.reset} which overrides tipping...`);
   const s2 = await sentry.submit([instruction], { profile: "zero-tip-failure" });
-  console.log(`${c.yellow}⚠ Submission complete. Evaluating state logs via AI...${c.reset}`);
+  console.log(`${c.yellow}[WARN] Submission complete. Evaluating state logs via AI...${c.reset}`);
   await sleep(1500);
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: Transaction failed simulation or got rejected because Jito tip is 0.\n` +
-    `  ↳ Severity: HIGH (Unacceptable Tip Value)\n` +
-    `  ↳ Action: RETRY with dynamic Jito floor calculated from live percentile API.\n` +
-    `  ↳ Recommended Tip: 30,000 lamports (Live Floor)\n` +
-    `  ↳ Confidence: 98%`,
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: Transaction failed simulation or got rejected because Jito tip is 0.\n` +
+    `  -> Severity: HIGH (Unacceptable Tip Value)\n` +
+    `  -> Action: RETRY with dynamic Jito floor calculated from live percentile API.\n` +
+    `  -> Recommended Tip: 30,000 lamports (Live Floor)\n` +
+    `  -> Confidence: 98%`,
     10
   );
   console.log();
@@ -80,11 +80,11 @@ async function main() {
   await sleep(1000);
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: Transaction rejected due to blockhash not found (expired blockhash).\n` +
-    `  ↳ Action: RETRY. Refresh blockhash from live RPC at 'confirmed' commitment level, re-sign, and resubmit.\n` +
-    `  ↳ Recommended Tip: 30,000 lamports\n` +
-    `  ↳ Confidence: 99%`,
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: Transaction rejected due to blockhash not found (expired blockhash).\n` +
+    `  -> Action: RETRY. Refresh blockhash from live RPC at 'confirmed' commitment level, re-sign, and resubmit.\n` +
+    `  -> Recommended Tip: 30,000 lamports\n` +
+    `  -> Confidence: 99%`,
     10
   );
   console.log();
@@ -99,15 +99,15 @@ async function main() {
     lamports: 100 * 1_000_000_000,
   });
   const s4 = await sentry.submit([impossibleIx]);
-  console.log(`${c.yellow}⚠ Checking simulation and logs...${c.reset}`);
+  console.log(`${c.yellow}[WARN] Checking simulation and logs...${c.reset}`);
   await sleep(1500);
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: Simulation failed because of InsufficientFundsForRent / insufficient balance.\n` +
-    `  ↳ Action: ABORT/HOLD. Retrying this transaction will result in identical errors. Save tip fee credits and halt pipeline.\n` +
-    `  ↳ Observed Risk: Wallet balance is below the required transaction output.\n` +
-    `  ↳ Confidence: 100%`,
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: Simulation failed because of InsufficientFundsForRent / insufficient balance.\n` +
+    `  -> Action: ABORT/HOLD. Retrying this transaction will result in identical errors. Save tip fee credits and halt pipeline.\n` +
+    `  -> Observed Risk: Wallet balance is below the required transaction output.\n` +
+    `  -> Confidence: 100%`,
     10
   );
 

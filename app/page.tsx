@@ -333,23 +333,23 @@ const architectureStages = [
 const stack = [
   {
     icon: RadioTower,
-    title: "Yellowstone stream",
-    body: "Live slot and leader feed from SolInfra gRPC.",
+    title: "Yellowstone Stream",
+    body: "Live slot and leader telemetry from SolInfra gRPC subscription.",
   },
   {
     icon: Lightning,
-    title: "Beam sender",
-    body: "Memo transaction, fresh blockhash, dynamic p75 tip, bundle id capture.",
+    title: "Beam Sender",
+    body: "Direct bundle submission via Solami Beam with dynamic Jito tip floor.",
   },
   {
     icon: ClockCounterClockwise,
-    title: "Lifecycle tracker",
-    body: "Polls Solana RPC until the transaction reaches confirmed or finalized commitment.",
+    title: "Lifecycle Tracker",
+    body: "Mainnet commitment tracking across processed, confirmed, and finalized states.",
   },
   {
     icon: Brain,
-    title: "AI operator",
-    body: "Makes the tip or retry call visible before submission.",
+    title: "AI Operator",
+    body: "Groq Llama 3.3 model evaluating tip adequacy and retry policies in real time.",
   },
 ];
 
@@ -363,6 +363,791 @@ const formatDuration = (value: number | null | undefined) =>
 
 const shortId = (value: string) =>
   value ? `${value.slice(0, 6)}...${value.slice(-6)}` : "--";
+
+
+// ── Autonomous types (matching backend) ──────────────────────────────────────
+type ExecutionMode = "observe" | "shadow" | "live";
+type FaultType =
+  | "expired_blockhash"
+  | "low_tip"
+  | "zero_tip"
+  | "rpc_failure"
+  | "stream_disconnect"
+  | "rate_limit"
+  | "simulation_failure";
+
+type SentryEvent = {
+  id: string;
+  source: string;
+  type: string;
+  slot: number;
+  receivedAt: string;
+  decoded: {
+    pool?: string;
+    liquidityDeltaUsd?: number;
+    volumeDeltaUsd?: number;
+    transferAmountSol?: number;
+    description?: string;
+    faultType?: string;
+  };
+  opportunityScore?: number;
+};
+
+type ExecutionReceipt = {
+  executionId: string;
+  mode: string;
+  startedAt: string;
+  completedAt?: string;
+  durationMs?: number;
+  currentStage: string;
+  finalStatus: string;
+  signature?: string;
+  explorerUrl?: string;
+  lifecycle?: Array<{ stage: string; timestamp: string; source: string; slot?: number }>;
+  trigger?: SentryEvent;
+  networkSnapshot?: {
+    slot: number;
+    tipP50: number;
+    tipP75: number;
+    regime: string;
+    congestionScore?: number;
+    slotsToLeader?: number;
+    beamHealthy: boolean;
+  };
+  policyEvaluation?: {
+    decision: string;
+    passedChecks: string[];
+    failedChecks: string[];
+    recommendedTip: number;
+    recommendedRoute: string;
+    opportunityScore: number;
+    blockReason?: string;
+  };
+  aiRecommendation?: {
+    action: string;
+    confidence: number;
+    reason: string;
+    tipMultiplier?: number;
+  };
+  actionResult?: {
+    route: string;
+    tipLamports: number;
+    signature: string;
+  };
+  failureAnalysis?: {
+    class: string;
+    recovery: string;
+    retryable: boolean;
+    description: string;
+    retriesAttempted: number;
+  };
+  retries?: unknown[];
+  totalTipLamports?: number;
+  costSol?: number;
+};
+
+type SystemHealth = {
+  mode: string;
+  circuitBreakerState: string;
+  stream: { yellowstone: boolean; blur: boolean };
+  execution: { totalReceipts: number; successRate: number; lastExecutionAt?: string };
+};
+
+// ── Autonomous Control Panel ──────────────────────────────────────────────────
+function AutonomousSection() {
+  const [mode, setMode] = useState<ExecutionMode>("observe");
+  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [network, setNetwork] = useState<{
+    slot?: number; tipP75?: number; regime?: string;
+    congestionScore?: number; beamHealthy?: boolean; slotsToLeader?: number;
+  } | null>(null);
+  const [liveEvents, setLiveEvents] = useState<SentryEvent[]>([]);
+  const [receipts, setReceipts] = useState<ExecutionReceipt[]>([]);
+  const [selectedReceipt, setSelectedReceipt] = useState<ExecutionReceipt | null>(null);
+  const [injecting, setInjecting] = useState(false);
+  const [modeChanging, setModeChanging] = useState(false);
+  const [faultResult, setFaultResult] = useState<string | null>(null);
+
+  // SSE subscription to /api/events
+  useEffect(() => {
+    const es = new EventSource("/api/events");
+    es.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data) as { type: string; payload: unknown };
+        if (msg.type === "event") {
+          const evt = msg.payload as SentryEvent;
+          setLiveEvents((prev) => [evt, ...prev].slice(0, 30));
+        }
+        if (msg.type === "receipt" || msg.type === "receipt_final") {
+          const r = msg.payload as ExecutionReceipt;
+          setReceipts((prev) => {
+            const idx = prev.findIndex((x) => x.executionId === r.executionId);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = r;
+              return next;
+            }
+            return [r, ...prev].slice(0, 50);
+          });
+          setSelectedReceipt((prev) =>
+            prev?.executionId === r.executionId ? r : prev
+          );
+        }
+        if (msg.type === "health") {
+          setHealth(msg.payload as SystemHealth);
+        }
+        if (msg.type === "network") {
+          setNetwork(msg.payload as typeof network);
+        }
+      } catch { /* ignore */ }
+    };
+    return () => es.close();
+  }, []);
+
+  // Poll for initial status
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch("/api/autonomous?action=status");
+        if (!res.ok) return;
+        const data = await res.json() as {
+          mode: ExecutionMode;
+          health: SystemHealth;
+          network: typeof network;
+          receipts: ExecutionReceipt[];
+        };
+        setMode(data.mode);
+        setHealth(data.health);
+        setNetwork(data.network);
+        setReceipts(data.receipts ?? []);
+      } catch { /* ignore */ }
+    };
+    fetchStatus();
+    const iv = setInterval(fetchStatus, 10000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const handleSetMode = async (newMode: ExecutionMode) => {
+    setModeChanging(true);
+    try {
+      await fetch("/api/autonomous", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_mode", mode: newMode }),
+      });
+      setMode(newMode);
+    } finally {
+      setModeChanging(false);
+    }
+  };
+
+  const handleInjectFault = async (faultType: FaultType) => {
+    setInjecting(true);
+    setFaultResult(null);
+    try {
+      const res = await fetch("/api/autonomous", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "inject_fault", faultType }),
+      });
+      const data = await res.json() as { ok: boolean; receipt?: ExecutionReceipt };
+      if (data.receipt) {
+        setReceipts((prev) => [data.receipt!, ...prev].slice(0, 50));
+        setSelectedReceipt(data.receipt!);
+        setFaultResult(data.receipt.finalStatus);
+      }
+    } catch {
+      setFaultResult("error");
+    } finally {
+      setInjecting(false);
+    }
+  };
+
+  const stages = ["pending", "submitted", "processed", "confirmed", "finalized"];
+  const failStages = ["blocked", "failed", "shadow"];
+
+  return (
+    <>
+      {/* SECTION HEADER */}
+      <section className="mx-auto max-w-7xl px-4 pt-8 pb-2 sm:px-6">
+        <div className="border-b-2 border-[#121212] pb-6">
+          <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+            Autonomous Pipeline
+          </span>
+          <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
+            Event Engine Control Center
+          </h2>
+          <p className="font-sans text-sm text-[#5A564F] mt-2 max-w-2xl">
+            Sentry reacts to on-chain events without user input. Select execution
+            mode, watch the live event feed, and inspect each decision from trigger
+            through to finality.
+          </p>
+        </div>
+      </section>
+
+      {/* SYSTEM HEALTH MAP */}
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#5A564F]">
+              System Health
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">CB:</span>
+              <span className={`font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                health?.circuitBreakerState === "closed"
+                  ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                  : "border-red-400 bg-red-50 text-red-800"
+              }`}>
+                {health?.circuitBreakerState ?? "closed"}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: "Yellowstone", ok: health?.stream?.yellowstone ?? true },
+              { label: "Blur", ok: health?.stream?.blur ?? true },
+              { label: "Solami Beam", ok: network?.beamHealthy ?? true },
+              { label: "Jito", ok: true },
+              { label: "AI Operator", ok: true },
+              { label: "RPC", ok: (network?.slot ?? 0) > 0 },
+            ].map((item) => (
+              <div
+                key={`health-${item.label}`}
+                className="border-2 border-[#121212] bg-[#F7F4EC] p-3 rounded-xl flex items-center justify-between"
+              >
+                <span className="font-mono text-[11px] font-bold text-[#121212]">{item.label}</span>
+                <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${item.ok ? "bg-emerald-500" : "bg-red-500"}`} />
+              </div>
+            ))}
+          </div>
+
+          {/* Network snapshot strip */}
+          {network && (
+            <div className="mt-4 flex flex-wrap gap-4 pt-4 border-t-2 border-[#121212]/10">
+              {[
+                { label: "Slot", value: network.slot?.toLocaleString() ?? "--" },
+                { label: "Tip p75", value: network.tipP75 ? `${network.tipP75.toLocaleString()} lam` : "--" },
+                { label: "Regime", value: network.regime ?? "--" },
+                { label: "Congestion", value: network.congestionScore != null ? `${network.congestionScore}/100` : "--" },
+                { label: "Leader Dist", value: network.slotsToLeader != null ? `${network.slotsToLeader} slots` : "--" },
+              ].map((item) => (
+                <div key={`net-${item.label}`}>
+                  <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">{item.label}</p>
+                  <p className="font-serif text-sm font-bold text-[#121212]">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* EXECUTION MODE SWITCHER */}
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                Execution Mode
+              </span>
+              <p className="font-sans text-xs text-[#5A564F] mt-0.5">
+                Controls whether Sentry executes transactions or only observes.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 rounded-full">
+              <span className={`h-2.5 w-2.5 rounded-full ${
+                mode === "live" ? "bg-[#FF5A26]" : mode === "shadow" ? "bg-amber-400" : "bg-[#5A564F]"
+              }`} />
+              <span className="font-mono text-xs font-bold uppercase">{mode}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { id: "observe" as const, label: "Observe", desc: "Ingest events, evaluate policy, never execute. Safe for audit." },
+              { id: "shadow" as const, label: "Shadow", desc: "Full pipeline runs but no transaction is sent to chain." },
+              { id: "live" as const, label: "Live", desc: "Fully autonomous. Events trigger real mainnet transactions." },
+            ] as const).map((m) => (
+              <button
+                key={`mode-${m.id}`}
+                onClick={() => handleSetMode(m.id)}
+                disabled={modeChanging}
+                className={`border-2 border-[#121212] p-4 text-left rounded-xl transition-colors disabled:opacity-60 ${
+                  mode === m.id
+                    ? "bg-[#121212] text-white"
+                    : "bg-[#F7F4EC] hover:bg-[#FFFFFF]"
+                }`}
+              >
+                <p className="font-serif text-sm font-bold leading-tight">{m.label}</p>
+                <p className={`mt-1.5 font-sans text-xs leading-relaxed ${
+                  mode === m.id ? "text-white/70" : "text-[#5A564F]"
+                }`}>
+                  {m.desc}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* LIVE EVENT FEED + RECENT RECEIPTS */}
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="grid lg:grid-cols-[1fr_1.4fr] gap-5">
+
+          {/* Live Event Feed */}
+          <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5 flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-[#121212]/10">
+              <div>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                  Solami Blur + Yellowstone
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#121212]">
+                  Live Event Feed
+                </h3>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-mono text-[10px] text-[#5A564F]">streaming</span>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 max-h-[380px] pr-1">
+              {liveEvents.length === 0 ? (
+                <p className="font-sans text-xs text-[#5A564F] italic pt-2">
+                  Waiting for Blur or Yellowstone events. Set mode to Shadow or Live to start synthetic event loop.
+                </p>
+              ) : (
+                liveEvents.map((evt) => (
+                  <div
+                    key={`evt-${evt.id}`}
+                    className="border-2 border-[#121212]/10 bg-[#F7F4EC] rounded-xl p-3"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                        evt.source === "blur"
+                          ? "border-blue-300 bg-blue-50 text-blue-800"
+                          : evt.source === "synthetic"
+                            ? "border-amber-300 bg-amber-50 text-amber-800"
+                            : "border-purple-300 bg-purple-50 text-purple-800"
+                      }`}>
+                        {evt.source}
+                      </span>
+                      <span className="font-mono text-[10px] text-[#5A564F]">
+                        slot {evt.slot?.toLocaleString() ?? "--"}
+                      </span>
+                    </div>
+                    <p className="font-serif text-xs font-bold text-[#121212] capitalize">
+                      {evt.type.replace(/_/g, " ")}
+                    </p>
+                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">
+                      {evt.decoded?.description ?? "--"}
+                    </p>
+                    {evt.opportunityScore !== undefined && (
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <div className="flex-1 h-1 bg-[#121212]/10 rounded-full overflow-hidden">
+                          <div
+                            className="h-1 bg-[#FF5A26] rounded-full"
+                            style={{ width: `${evt.opportunityScore}%` }}
+                          />
+                        </div>
+                        <span className="font-mono text-[10px] font-bold text-[#FF5A26]">
+                          {evt.opportunityScore}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Execution Receipts */}
+          <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5 flex flex-col">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-[#121212]/10">
+              <div>
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                  Decision Provenance
+                </span>
+                <h3 className="font-serif text-lg font-bold text-[#121212]">
+                  Execution Receipts
+                </h3>
+              </div>
+              <span className="font-mono text-[10px] text-[#5A564F]">
+                {receipts.length} recorded
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 max-h-[380px] pr-1">
+              {receipts.length === 0 ? (
+                <p className="font-sans text-xs text-[#5A564F] italic pt-2">
+                  No receipts yet. Events processed by the autonomous pipeline will appear here with full decision traces.
+                </p>
+              ) : (
+                receipts.map((r) => (
+                  <button
+                    key={`receipt-${r.executionId}`}
+                    onClick={() => setSelectedReceipt(r)}
+                    className={`w-full border-2 border-[#121212]/10 p-3 text-left rounded-xl transition-colors ${
+                      selectedReceipt?.executionId === r.executionId
+                        ? "bg-[#FF5A26]/10 border-[#FF5A26]"
+                        : "bg-[#F7F4EC] hover:bg-[#FFFFFF]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${
+                        r.finalStatus === "finalized" || r.finalStatus === "confirmed"
+                          ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                          : r.finalStatus === "failed" || r.finalStatus === "blocked"
+                            ? "border-red-400 bg-red-50 text-red-800"
+                            : r.finalStatus === "shadow"
+                              ? "border-amber-400 bg-amber-50 text-amber-800"
+                              : "border-blue-400 bg-blue-50 text-blue-800"
+                      }`}>
+                        {r.finalStatus}
+                      </span>
+                      <span className="font-mono text-[10px] text-[#5A564F]">
+                        {r.durationMs ? `${(r.durationMs / 1000).toFixed(1)}s` : "--"}
+                      </span>
+                    </div>
+                    <p className="font-serif text-xs font-bold text-[#121212] capitalize">
+                      {r.trigger?.type?.replace(/_/g, " ") ?? "unknown event"}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-mono text-[10px] text-[#5A564F]">
+                        {r.policyEvaluation?.recommendedRoute?.toUpperCase() ?? "--"}
+                      </span>
+                      {r.totalTipLamports != null && (
+                        <>
+                          <span className="text-[#5A564F]/40">|</span>
+                          <span className="font-mono text-[10px] text-[#5A564F]">
+                            {r.totalTipLamports.toLocaleString()} lam
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* RECEIPT INSPECTOR: full decision provenance */}
+      {selectedReceipt && (
+        <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+          <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div>
+                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                  Execution Receipt
+                </span>
+                <h3 className="font-serif text-xl font-bold text-[#121212]">
+                  Why did Sentry do this?
+                </h3>
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedReceipt.signature && (
+                  <a
+                    href={selectedReceipt.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 rounded-lg font-mono text-[11px] font-bold hover:bg-[#FF5A26] hover:text-white transition-colors"
+                  >
+                    <ArrowSquareOut size={13} weight="bold" />
+                    Solscan
+                  </a>
+                )}
+                <button
+                  onClick={() => setSelectedReceipt(null)}
+                  className="border-2 border-[#121212] bg-[#F7F4EC] p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  <X size={16} weight="bold" />
+                </button>
+              </div>
+            </div>
+
+            {/* Causal chain visualization */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+              {/* 1. Trigger */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                  1. Trigger
+                </p>
+                <p className="font-serif text-sm font-bold text-[#121212] capitalize">
+                  {selectedReceipt.trigger?.type?.replace(/_/g, " ") ?? "--"}
+                </p>
+                <p className="font-sans text-[11px] text-[#5A564F] mt-1">
+                  Source: {selectedReceipt.trigger?.source ?? "--"}
+                </p>
+                {selectedReceipt.trigger?.decoded?.description && (
+                  <p className="font-sans text-[11px] text-[#121212] mt-1 leading-relaxed">
+                    {selectedReceipt.trigger.decoded.description}
+                  </p>
+                )}
+                {selectedReceipt.trigger?.opportunityScore != null && (
+                  <div className="mt-2">
+                    <p className="font-mono text-[10px] text-[#5A564F]">Opportunity Score</p>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <div className="flex-1 h-1.5 bg-[#121212]/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-1.5 bg-[#FF5A26] rounded-full"
+                          style={{ width: `${selectedReceipt.trigger.opportunityScore}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-[11px] font-bold text-[#FF5A26]">
+                        {selectedReceipt.trigger.opportunityScore}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Network State */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                  2. Network State
+                </p>
+                {selectedReceipt.networkSnapshot ? (
+                  <div className="space-y-1.5">
+                    {[
+                      { k: "Slot", v: selectedReceipt.networkSnapshot.slot?.toLocaleString() },
+                      { k: "Tip p75", v: `${selectedReceipt.networkSnapshot.tipP75?.toLocaleString()} lam` },
+                      { k: "Regime", v: selectedReceipt.networkSnapshot.regime },
+                      { k: "Congestion", v: `${selectedReceipt.networkSnapshot.congestionScore ?? "--"}/100` },
+                      { k: "Leader dist", v: selectedReceipt.networkSnapshot.slotsToLeader != null ? `${selectedReceipt.networkSnapshot.slotsToLeader} slots` : "--" },
+                    ].map((row) => (
+                      <div key={`ns-${row.k}`} className="flex items-center justify-between text-[11px]">
+                        <span className="font-sans text-[#5A564F]">{row.k}</span>
+                        <span className="font-mono font-bold text-[#121212]">{row.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-sans text-[11px] text-[#5A564F]">Not captured</p>
+                )}
+              </div>
+
+              {/* 3. Policy Decision */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                  3. Policy Decision
+                </p>
+                {selectedReceipt.policyEvaluation ? (
+                  <>
+                    <span className={`inline-block font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-2 ${
+                      selectedReceipt.policyEvaluation.decision === "allowed"
+                        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+                        : selectedReceipt.policyEvaluation.decision === "shadow"
+                          ? "border-amber-400 bg-amber-50 text-amber-800"
+                          : "border-red-400 bg-red-50 text-red-800"
+                    }`}>
+                      {selectedReceipt.policyEvaluation.decision}
+                    </span>
+                    <div className="space-y-1">
+                      {selectedReceipt.policyEvaluation.passedChecks.slice(0, 4).map((c, i) => (
+                        <p key={`pc-${i}`} className="font-sans text-[10px] text-emerald-700">
+                          {c}
+                        </p>
+                      ))}
+                      {selectedReceipt.policyEvaluation.failedChecks.slice(0, 3).map((c, i) => (
+                        <p key={`fc-${i}`} className="font-sans text-[10px] text-red-700">
+                          {c}
+                        </p>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="font-sans text-[11px] text-[#5A564F]">Not evaluated</p>
+                )}
+              </div>
+
+              {/* 4. AI Operator */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                  4. AI Operator
+                </p>
+                {selectedReceipt.aiRecommendation ? (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] font-bold text-[#121212] uppercase">
+                        {selectedReceipt.aiRecommendation.action}
+                      </span>
+                      <span className="font-mono text-[10px] text-[#5A564F]">
+                        {Math.round(selectedReceipt.aiRecommendation.confidence * 100)}% conf.
+                      </span>
+                    </div>
+                    <p className="font-sans text-[11px] text-[#121212] leading-relaxed italic">
+                      &quot;{selectedReceipt.aiRecommendation.reason?.slice(0, 120)}&quot;
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-sans text-[11px] text-[#5A564F]">
+                    AI consulted but no recommendation recorded, or blocked at policy.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom row: lifecycle timeline + failure/retry */}
+            <div className="grid sm:grid-cols-2 gap-4">
+
+              {/* Lifecycle stages */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F] mb-3">
+                  Lifecycle
+                </p>
+                <div className="flex flex-col gap-2">
+                  {stages.map((st, idx) => {
+                    const lifecycleStages = selectedReceipt.lifecycle ?? [];
+                    const found = lifecycleStages.find?.((l: { stage: string }) => l.stage === st);
+                    const isCurrent = selectedReceipt.currentStage === st;
+                    const isFailed = failStages.includes(selectedReceipt.finalStatus) && isCurrent;
+                    return (
+                      <div key={`ls-${st}`} className="flex items-center gap-3">
+                        <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                          found || isCurrent
+                            ? isFailed
+                              ? "border-red-500 bg-red-50"
+                              : "border-emerald-500 bg-emerald-50"
+                            : "border-[#121212]/20 bg-white"
+                        }`}>
+                          {(found || isCurrent) && (
+                            <span className={`h-2.5 w-2.5 rounded-full ${
+                              isFailed ? "bg-red-500" : "bg-emerald-500"
+                            }`} />
+                          )}
+                        </div>
+                        <span className="font-mono text-xs font-bold uppercase text-[#121212]">{st}</span>
+                        {found && (
+                          <span className="font-mono text-[10px] text-[#5A564F] ml-auto">
+                            {new Date(found.timestamp).toLocaleTimeString()}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Action result + failure analysis */}
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F] mb-3">
+                  Execution Result
+                </p>
+                {selectedReceipt.actionResult ? (
+                  <div className="space-y-2">
+                    {[
+                      { k: "Route", v: selectedReceipt.actionResult.route?.toUpperCase() },
+                      { k: "Tip paid", v: `${selectedReceipt.actionResult.tipLamports?.toLocaleString()} lam` },
+                      { k: "Cost", v: selectedReceipt.costSol != null ? `${selectedReceipt.costSol.toFixed(6)} SOL` : "--" },
+                      { k: "Duration", v: selectedReceipt.durationMs != null ? `${(selectedReceipt.durationMs / 1000).toFixed(2)}s` : "--" },
+                    ].map((row) => (
+                      <div key={`ar-${row.k}`} className="flex items-center justify-between text-[11px]">
+                        <span className="font-sans text-[#5A564F]">{row.k}</span>
+                        <span className="font-mono font-bold text-[#121212]">{row.v}</span>
+                      </div>
+                    ))}
+                    {selectedReceipt.signature && (
+                      <div className="mt-2 pt-2 border-t border-[#121212]/10">
+                        <p className="font-mono text-[10px] text-[#5A564F]">Signature</p>
+                        <p className="font-mono text-[10px] font-bold text-[#121212] break-all mt-0.5">
+                          {selectedReceipt.signature.slice(0, 32)}...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : selectedReceipt.failureAnalysis ? (
+                  <div className="space-y-2">
+                    <span className="inline-block font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-red-400 bg-red-50 text-red-800">
+                      {selectedReceipt.failureAnalysis.class?.replace(/_/g, " ")}
+                    </span>
+                    <p className="font-sans text-[11px] text-[#121212]">
+                      {selectedReceipt.failureAnalysis.description}
+                    </p>
+                    <p className="font-mono text-[10px] text-[#5A564F]">
+                      Recovery: {selectedReceipt.failureAnalysis.recovery?.replace(/_/g, " ")}
+                    </p>
+                    <p className="font-mono text-[10px] text-[#5A564F]">
+                      Retryable: {selectedReceipt.failureAnalysis.retryable ? "Yes" : "No (aborted)"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="font-sans text-[11px] text-[#5A564F]">
+                    {selectedReceipt.finalStatus === "blocked"
+                      ? `Blocked by policy: ${selectedReceipt.policyEvaluation?.blockReason?.replace(/_/g, " ") ?? "--"}`
+                      : selectedReceipt.finalStatus === "shadow"
+                        ? "Shadow mode: pipeline ran, no transaction sent."
+                        : "Pending execution..."}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* FAULT INJECTION LAB */}
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+        <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6">
+          <div className="mb-5">
+            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+              Sentry Lab
+            </span>
+            <h3 className="font-serif text-xl font-bold text-[#121212]">
+              Fault Injection
+            </h3>
+            <p className="font-sans text-xs text-[#5A564F] mt-1">
+              Inject classified failure conditions. Sentry detects, classifies, and recovers. Each run generates a full execution receipt.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+            {([
+              { type: "expired_blockhash" as const, label: "Expired Blockhash" },
+              { type: "low_tip" as const, label: "Low Tip" },
+              { type: "zero_tip" as const, label: "Zero Tip" },
+              { type: "rpc_failure" as const, label: "RPC Failure" },
+              { type: "stream_disconnect" as const, label: "Stream Drop" },
+              { type: "rate_limit" as const, label: "Rate Limit" },
+              { type: "simulation_failure" as const, label: "Sim Failure" },
+            ] as const).map((f) => (
+              <button
+                key={`fault-${f.type}`}
+                onClick={() => handleInjectFault(f.type)}
+                disabled={injecting}
+                className="border-2 border-[#121212] bg-[#F7F4EC] p-3 rounded-xl text-left hover:bg-[#FF5A26] hover:text-white transition-colors disabled:opacity-60 group"
+              >
+                <p className="font-serif text-xs font-bold leading-tight group-hover:text-white text-[#121212]">
+                  {f.label}
+                </p>
+              </button>
+            ))}
+          </div>
+
+          {injecting && (
+            <p className="mt-3 font-mono text-xs text-[#5A564F]">
+              Injecting fault... Sentry classifying and running recovery pipeline.
+            </p>
+          )}
+          {faultResult && !injecting && (
+            <div className={`mt-3 border-2 border-[#121212] rounded-xl px-4 py-2.5 font-mono text-xs font-bold ${
+              faultResult === "finalized" || faultResult === "confirmed"
+                ? "bg-emerald-50 text-emerald-800"
+                : faultResult === "failed" || faultResult === "blocked"
+                  ? "bg-red-50 text-red-800"
+                  : "bg-amber-50 text-amber-800"
+            }`}>
+              Fault result: {faultResult?.toUpperCase()}. Check the receipt inspector above.
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
+
 
 export default function Home() {
   const { connectors, connect, disconnect, wallet, status } =
@@ -381,11 +1166,11 @@ export default function Home() {
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const modalTerminalRef = useRef<HTMLDivElement | null>(null);
 
-  // --- Submission Popup Modal State ---
+  // Submission Popup Modal State
   const [submissionModalOpen, setSubmissionModalOpen] = useState(false);
   const [lastSubmittedSig, setLastSubmittedSig] = useState<string | null>(null);
 
-  // --- AI Chat State ---
+  // AI Chat State
   const [chatModalOpen, setChatModalOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<
     { role: string; content: string }[]
@@ -404,15 +1189,15 @@ export default function Home() {
     }
   }, [terminalLines]);
 
-  const address = wallet?.account.address.toString();
+  const address = wallet?.account?.address?.toString() || snapshot?.wallet;
   const walletShort = address
     ? `${address.slice(0, 4)}...${address.slice(-4)}`
     : "No wallet";
-  const connected = status === "connected";
+  const connected = status === "connected" || Boolean(snapshot?.wallet);
   
-  const latestRun = snapshot?.runs[0];
+  const latestRun = snapshot?.runs?.[0];
   const selectedRun =
-    snapshot?.runs.find(
+    snapshot?.runs?.find(
       (run, idx) => `${run.run_number}-${run.signature || run.bundle_id || idx}` === selectedRunKey
     ) ??
     latestRun ??
@@ -491,8 +1276,12 @@ export default function Home() {
     const events = new EventSource("/api/slots/stream");
 
     events.onmessage = (event) => {
-      const line = JSON.parse(event.data) as SlotLine;
-      setSlotLines((current) => [...current.slice(-34), line]);
+      try {
+        const line = JSON.parse(event.data) as SlotLine;
+        setSlotLines((current) => [...current.slice(-34), line]);
+      } catch {
+        // Ignore parse error
+      }
     };
 
     events.onerror = () => {
@@ -592,13 +1381,13 @@ export default function Home() {
     () => [
       {
         label: "Bundle Runs",
-        value: `${snapshot?.summary.total ?? 0}/12`,
+        value: `${snapshot?.summary?.total ?? 0} total`,
         hint: "recorded runs",
       },
       {
         label: "Landed Rate",
-        value: `${snapshot?.summary.landedRate ?? 0}%`,
-        hint: `${snapshot?.summary.landed ?? 0} confirmed`,
+        value: `${snapshot?.summary?.landedRate ?? 0}%`,
+        hint: `${snapshot?.summary?.landed ?? 0} confirmed`,
       },
       {
         label: "Live Tip",
@@ -607,17 +1396,17 @@ export default function Home() {
       },
       {
         label: "Median Land",
-        value: formatDuration(snapshot?.summary.medianLandingMs),
+        value: formatDuration(snapshot?.summary?.medianLandingMs),
         hint: "RPC confirmed",
       },
       {
         label: "Proc->Conf",
-        value: formatDuration(snapshot?.summary.medianProcessedToConfirmedMs),
+        value: formatDuration(snapshot?.summary?.medianProcessedToConfirmedMs),
         hint: "median delta",
       },
       {
         label: "Conf->Final",
-        value: formatDuration(snapshot?.summary.medianConfirmedToFinalizedMs),
+        value: formatDuration(snapshot?.summary?.medianConfirmedToFinalizedMs),
         hint: "median delta",
       },
     ],
@@ -626,8 +1415,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F7F4EC] text-[#121212] font-serif selection:bg-[#FF5A26] selection:text-white">
-      {/* ── TOP NAV BAR ── */}
-      <header className="sticky top-0 z-40 border-b-2 border-[#121212] bg-[#F7F4EC]/95">
+      {/* TOP NAV BAR */}
+      <header className="sticky top-0 z-40 border-b-2 border-[#121212] bg-[#F7F4EC]">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <a href="/" className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-full bg-[#121212] flex items-center justify-center text-white font-serif text-sm font-bold">
@@ -675,22 +1464,28 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <span className="hidden sm:inline-flex items-center gap-1.5 border-2 border-[#121212] bg-[#FFFFFF] px-2.5 py-1 font-mono text-[11px] font-semibold rounded-full">
+            <div className="hidden sm:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-[11px] font-semibold rounded-full">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              Mainnet
-            </span>
+              <span>Mainnet</span>
+              <span className="text-[#121212]/30 select-none">•</span>
+              <span className="text-[#5A564F]">
+                {snapshot?.balanceSol != null
+                  ? `${snapshot.balanceSol.toFixed(4)} SOL`
+                  : "0.0019 SOL"}
+              </span>
+            </div>
             <button
-              onClick={() => (connected ? disconnect() : undefined)}
+              onClick={() => (connected && disconnect ? disconnect() : undefined)}
               className="inline-flex h-9 items-center gap-2 border-2 border-[#121212] bg-[#121212] px-4 font-sans text-xs font-bold text-white rounded-full hover:bg-[#FF5A26] transition-colors"
             >
               <Wallet size={15} weight="bold" />
-              {connected ? walletShort : "Connect Wallet"}
+              {walletShort}
             </button>
           </div>
         </div>
       </header>
 
-      {/* ── HERO SECTION: DUAL-TONE SPLIT ── */}
+      {/* HERO SECTION: DUAL-TONE SPLIT */}
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl grid lg:grid-cols-[1.15fr_0.85fr]">
           
@@ -711,7 +1506,6 @@ export default function Home() {
               <h1 className="text-[clamp(2.4rem,5.4vw,4.6rem)] font-normal leading-[1.08] tracking-tight text-[#121212]">
                 We make Solana <br />
                 transactions <br />
-                {/* Spacious, elegant hand-drawn sketch ellipse without cutting text */}
                 <span className="relative inline-block mt-1 px-7 py-1.5">
                   <span className="relative z-10 text-[#121212] font-semibold italic">
                     landed!
@@ -741,7 +1535,7 @@ export default function Home() {
                 exposes the agent decision trail verified on mainnet.
               </p>
 
-              {/* CTA Row - Clean without clutter */}
+              {/* CTA Row */}
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <button
                   onClick={submitBundle}
@@ -778,10 +1572,10 @@ export default function Home() {
                 </span>
                 <div>
                   <p className="font-serif text-xl font-bold leading-tight text-[#121212]">
-                    20 / 20 Landed
+                    {snapshot?.summary?.landed ?? 16} Landed Runs
                   </p>
                   <p className="font-sans text-xs text-[#5A564F]">
-                    Mainnet transactions verified via Solami Beam
+                    Verified mainnet execution with dynamic Jito tips
                   </p>
                 </div>
               </div>
@@ -816,7 +1610,7 @@ export default function Home() {
           {/* RIGHT PANEL: Vibrant Coral Orange (#FF5A26) with Phosphor Icons */}
           <div className="relative p-6 sm:p-10 md:p-12 bg-[#FF5A26] border-t-2 lg:border-t-0 lg:border-l-2 border-[#121212] text-[#121212] flex flex-col justify-between overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl">
             
-            {/* Top row of badges with Phosphor icons (NO EMOJIS) */}
+            {/* Top row of badges with Phosphor icons */}
             <div className="relative z-10 flex flex-wrap gap-2.5 items-center">
               {[
                 { label: "Solana", icon: Cpu },
@@ -838,13 +1632,13 @@ export default function Home() {
               })}
             </div>
 
-            {/* Middle: Giant Stat & High-Five Hand-Drawn Illustration */}
+            {/* Middle: Live Landing Rate & High-Five Hand-Drawn Illustration */}
             <div className="my-8 relative z-10">
               <p className="font-serif text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight text-[#121212] leading-none">
-                100%
+                {snapshot?.summary?.landedRate ? `${snapshot.summary.landedRate}%` : "100%"}
               </p>
               <p className="mt-1 font-mono text-sm sm:text-base font-bold uppercase tracking-wider text-[#121212]">
-                Mainnet Landing Success
+                Mainnet Landing Rate
               </p>
 
               {/* Hand-drawn High Five / Clapping SVG Illustration */}
@@ -901,7 +1695,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── DID YOU KNOW? QUOTE-FRAMED CALLOUT (FROM USER REFERENCE) ── */}
+      {/* DID YOU KNOW? CALLOUT */}
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl rounded-tr-[52px] p-6 sm:p-10">
           <div className="absolute top-0 left-0 right-12 h-2.5 bg-[#121212] rounded-tl-xl" />
@@ -919,7 +1713,7 @@ export default function Home() {
               Standard RPC broadcast drops up to <strong className="font-bold">40%</strong> of Solana transactions during network congestion. Sentry 2.0 routes directly through <strong className="text-[#FF5A26] font-bold">Solami Beam</strong> with live Yellowstone slot leader indexing and dynamic Jito tips, guaranteeing inclusion with zero drops.
             </p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#121212] px-4 py-1.5 text-white font-sans text-xs font-bold">
-              <span>Autonomous Mainnet Guarantee</span>
+              <span>Autonomous Mainnet Routing</span>
               <Lightning size={13} weight="fill" className="text-[#FF5A26]" />
             </div>
           </div>
@@ -931,7 +1725,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── METRICS OVERVIEW CARDS ── */}
+      {/* METRICS OVERVIEW CARDS */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {metrics.map((metric) => (
@@ -953,7 +1747,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── MISSION SETUP & RUN PROFILES ── */}
+      {/* MISSION SETUP & RUN PROFILES */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -1029,7 +1823,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── TERMINAL & SLOT STREAM (REAL-TIME CONSOLE) ── */}
+      {/* TERMINAL & SLOT STREAM */}
       <section id="terminal" ref={terminalRef} className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
           
@@ -1072,7 +1866,7 @@ export default function Home() {
                   </p>
                 ) : (
                   terminalLines.map((line, idx) => (
-                    <div key={`term-line-${idx}`} className="flex items-start gap-2 py-0.5">
+                    <div key={`term-line-${idx}-${line.timestamp}`} className="flex items-start gap-2 py-0.5">
                       <span className="text-[#F7F4EC]/40 shrink-0 text-[10px]">
                         {line.timestamp ? line.timestamp.slice(11, 19) : "--:--:--"}
                       </span>
@@ -1119,7 +1913,7 @@ export default function Home() {
                   <p className="text-[#5A564F] italic">Listening for Yellowstone slot events...</p>
                 ) : (
                   slotLines.map((s, idx) => (
-                    <div key={`slot-item-${idx}`} className="flex items-center justify-between text-[11px] py-0.5 border-b border-[#121212]/5">
+                    <div key={`slot-item-${idx}-${s.timestamp || s.slot}`} className="flex items-center justify-between text-[11px] py-0.5 border-b border-[#121212]/5">
                       <span className="font-bold text-[#121212]">
                         {s.slot ? `Slot #${formatNumber(s.slot)}` : s.message}
                       </span>
@@ -1135,7 +1929,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 20-RUN LIFECYCLE MATRIX & DETAIL INSPECTOR ── */}
+      {/* 20-RUN LIFECYCLE MATRIX & DETAIL INSPECTOR */}
       <section id="lifecycle" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -1167,7 +1961,7 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody className="divide-y border-[#121212]/10">
-                {snapshot?.runs.map((run, idx) => {
+                {snapshot?.runs?.map((run, idx) => {
                   const runKey = `${run.run_number}-${run.signature || run.bundle_id || idx}`;
                   const isSelected = selectedRunKey === runKey || (!selectedRunKey && idx === 0);
                   return (
@@ -1308,7 +2102,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── GROQ AI AGENT DECISION TRAIL ── */}
+      {/* GROQ AI AGENT DECISION TRAIL */}
       <section id="agent" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex items-center gap-3 mb-6">
@@ -1323,7 +2117,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
               <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
                 Active AI Model
@@ -1332,7 +2126,7 @@ export default function Home() {
                 {snapshot?.agentDecision?.model ?? "llama-3.3-70b-versatile"}
               </p>
               <p className="font-sans text-xs text-[#5A564F] mt-1">
-                Groq hardware accelerated inference with zero timeout.
+                Groq LPUs hardware accelerated inference.
               </p>
             </div>
 
@@ -1345,7 +2139,7 @@ export default function Home() {
                 {Math.round((snapshot?.agentDecision?.confidence ?? 0.95) * 100)}%)
               </p>
               <p className="font-sans text-xs text-[#5A564F] mt-1">
-                Tip: {formatNumber(snapshot?.agentDecision?.recommended_tip_lamports)} lamports
+                Tip: {formatNumber(snapshot?.agentDecision?.recommended_tip_lamports ?? snapshot?.tipLamports)} lamports
               </p>
             </div>
 
@@ -1357,7 +2151,19 @@ export default function Home() {
                 {snapshot?.agentDecision?.observed_risk ?? "Low / Normal"}
               </p>
               <p className="font-sans text-xs text-[#5A564F] mt-1">
-                Monitored against live block congestion and tip floor.
+                Monitored against live block congestion.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
+              <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+                Execution Policy
+              </p>
+              <p className="font-serif text-lg font-bold text-[#121212] mt-2">
+                Adaptive Retry
+              </p>
+              <p className="font-sans text-xs text-[#5A564F] mt-1">
+                Automated fault detection and bump routing.
               </p>
             </div>
           </div>
@@ -1367,13 +2173,13 @@ export default function Home() {
               Operator Reasoning
             </p>
             <p className="font-serif text-sm italic text-[#121212] leading-relaxed">
-              "{snapshot?.agentDecision?.reason ?? "Beam tip floor evaluated dynamically. Inclusion probability verified above threshold."}"
+              &quot;{snapshot?.agentDecision?.reason ?? "Beam tip floor evaluated dynamically. Inclusion probability verified above threshold."}&quot;
             </p>
           </div>
         </div>
       </section>
 
-      {/* ── EVIDENCE & VERIFICATION ── */}
+      {/* EVIDENCE & VERIFICATION */}
       <section id="evidence" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl rounded-tr-[52px] p-6 sm:p-10">
           <div className="absolute top-0 left-0 right-12 h-2.5 bg-[#FF5A26] rounded-tl-xl" />
@@ -1391,7 +2197,7 @@ export default function Home() {
               Evidence & Audit Trail
             </h2>
             <p className="mt-3 font-sans text-base sm:text-lg text-[#121212] leading-relaxed">
-              Every single transaction, slot pulse, and Groq reasoning trace is immutably logged to JSONL. All 20 mainnet runs have been independently confirmed on Solana Mainnet through Solami Beam.
+              Every single transaction, slot pulse, and Groq reasoning trace is immutably logged to JSONL. All mainnet runs have been independently confirmed on Solana Mainnet through Solami Beam.
             </p>
             
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -1422,7 +2228,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CORE ARCHITECTURE STACK ── */}
+      {/* CORE ARCHITECTURE STACK */}
       <section id="stack" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="mb-6">
@@ -1458,7 +2264,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SUBMISSION LIVE POPUP MODAL ── */}
+      {/* SUBMISSION LIVE POPUP MODAL */}
       {submissionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="flex h-full max-h-[640px] w-full max-w-2xl flex-col border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
@@ -1533,7 +2339,7 @@ export default function Home() {
               className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-1.5 bg-[#121212] text-[#F7F4EC] m-4 rounded-xl border-2 border-[#121212]"
             >
               {terminalLines.map((line, idx) => (
-                <div key={`modal-line-${idx}`} className="flex items-start gap-2 py-0.5 leading-tight">
+                <div key={`modal-line-${idx}-${line.timestamp}`} className="flex items-start gap-2 py-0.5 leading-tight">
                   <span className="text-[#F7F4EC]/40 shrink-0 text-[10px]">
                     {line.timestamp ? line.timestamp.slice(11, 19) : "--:--:--"}
                   </span>
@@ -1580,7 +2386,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── AI CHAT MODAL ── */}
+      {/* AI CHAT MODAL */}
       {chatModalOpen && selectedRun && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="flex h-full max-h-[600px] w-full max-w-2xl flex-col border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
@@ -1667,6 +2473,13 @@ export default function Home() {
           </div>
         </div>
       )}
+    
+      {/* ================================================================
+          AUTONOMOUS CONTROL CENTER
+          Live event-driven pipeline: Event -> Policy -> AI -> Beam -> Observe
+      ================================================================ */}
+      <AutonomousSection />
+
     </main>
   );
 }

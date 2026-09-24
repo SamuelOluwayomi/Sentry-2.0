@@ -28,38 +28,38 @@ async function main() {
   console.log(`${c.yellow}${c.bold}  Sentry Re-quoting slippage Recovery Test Harness             ${c.reset}`);
   console.log(`${c.yellow}${c.bold}================================================================${c.reset}\n`);
 
-  console.log(`${c.bold}[Step 1] Requesting SOL ⇄ USDC swap quote (Slippage: 0.5% / 50 bps)...${c.reset}`);
+  console.log(`${c.bold}[Step 1] Requesting SOL <-> USDC swap quote (Slippage: 0.5% / 50 bps)...${c.reset}`);
   await sleep(1500);
-  console.log(`${c.green}✔ Quote received. Submitting Jito Bundle...${c.reset}`);
+  console.log(`${c.green}[OK] Quote received. Submitting Jito Bundle...${c.reset}`);
   await sleep(1000);
 
-  console.log(`${c.red}✘ Error: Transaction simulation failed (Slippage Exceeded).${c.reset}`);
+  console.log(`${c.red}[ERR] Error: Transaction simulation failed (Slippage Exceeded).${c.reset}`);
   console.log(`- Token price moved out of acceptable buy bounds during slot execution.`);
-  console.log(`${c.yellow}⚠ Launching AI agent analysis handler...${c.reset}\n`);
+  console.log(`${c.yellow}[WARN] Launching AI agent analysis handler...${c.reset}\n`);
   await sleep(2000);
 
   await typewriter(
-    `${c.cyan}${c.bold}[AI Reasoning Chain — Typewriter Output]${c.reset}\n` +
-    `  ↳ Diagnosis: slippage exceeded limit due to block volatility.\n` +
-    `  ↳ Action: RE-QUOTE (Do not retry stagnant parameters).\n` +
-    `  ↳ Recovery Plan:\n` +
+    `${c.cyan}${c.bold}[AI Reasoning Chain - Typewriter Output]${c.reset}\n` +
+    `  -> Diagnosis: slippage exceeded limit due to block volatility.\n` +
+    `  -> Action: RE-QUOTE (Do not retry stagnant parameters).\n` +
+    `  -> Recovery Plan:\n` +
     `    1. Query Jupiter quote API for a fresh price.\n` +
     `    2. Automatically scale slippage target to 2.0% (200 bps) to bypass local peaks.\n` +
     `    3. Re-sign transaction, adjust tip to 45,000 lamports, and resubmit.\n` +
-    `  ↳ Confidence: 96%`,
+    `  -> Confidence: 96%`,
     10
   );
   console.log();
   await sleep(2000);
 
   console.log(`${c.bold}[Step 2] Executing AI Recovery Plan...${c.reset}`);
-  console.log(`- Fetching fresh SOL ⇄ USDC swap quote (Slippage expanded to 200 bps)...`);
+  console.log(`- Fetching fresh SOL <-> USDC swap quote (Slippage expanded to 200 bps)...`);
   await sleep(1500);
-  console.log(`${c.green}✔ Fresh quote received! Price adjusted slightly. Re-signed & serialized.${c.reset}`);
+  console.log(`${c.green}[OK] Fresh quote received! Price adjusted slightly. Re-signed & serialized.${c.reset}`);
   console.log(`- Submitting new bundle to Jito...`);
   await sleep(1500);
 
-  console.log(`${c.green}✔ Transaction landed successfully at slot 429103859!${c.reset}`);
+  console.log(`${c.green}[OK] Transaction landed successfully at slot 429103859!${c.reset}`);
   console.log(`- Signature: 3fTwy8N2Sqm...${c.reset}`);
   console.log(`- Final Tip Paid: 45,000 lamports${c.reset}`);
   console.log(`- Status: Landed via Re-quote recovery loop.${c.reset}`);

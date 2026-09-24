@@ -18,36 +18,36 @@ async function main() {
   console.log(`${c.magenta}${c.bold}  Sentry MEV Sandwich Protection Audit Harness                  ${c.reset}`);
   console.log(`${c.magenta}${c.bold}================================================================${c.reset}\n`);
 
-  console.log(`${c.bold}[Step 1] Modeling a large swap of 500 SOL ⇄ USDC...${c.reset}`);
+  console.log(`${c.bold}[Step 1] Modeling a large swap of 500 SOL <-> USDC...${c.reset}`);
   console.log(`- Expected Price Impact: ${c.red}1.25%${c.reset}`);
   console.log(`- Calculated Extractable MEV: ${c.cyan}3.125 SOL ($437.50 USD equivalent)${c.reset}\n`);
   await sleep(1500);
 
   // ---- Public Transaction path animation ----
   console.log(`${c.bold}[Route A] Public Mempool Submission (No protection)...${c.reset}`);
-  console.log(`${c.yellow}⚡ Submitting to public RPC node...${c.reset}`);
+  console.log(`${c.yellow} Submitting to public RPC node...${c.reset}`);
   await sleep(800);
-  console.log(`  ${c.red}↳ [Mempool Sniffed] MEV Searcher identifies transaction.${c.reset}`);
+  console.log(`  ${c.red}-> [Mempool Sniffed] MEV Searcher identifies transaction.${c.reset}`);
   await sleep(600);
-  console.log(`  ${c.red}↳ [FRONTRUN] Searcher buys token ahead of you, raising the price.${c.reset}`);
+  console.log(`  ${c.red}-> [FRONTRUN] Searcher buys token ahead of you, raising the price.${c.reset}`);
   await sleep(600);
-  console.log(`  ${c.yellow}↳ [YOUR TX EXECUTION] Swap executes at maximum slippage bounds (1.0% loss).${c.reset}`);
+  console.log(`  ${c.yellow}-> [YOUR TX EXECUTION] Swap executes at maximum slippage bounds (1.0% loss).${c.reset}`);
   await sleep(600);
-  console.log(`  ${c.red}↳ [BACKRUN] Searcher sells, locking in risk-free profit.${c.reset}`);
+  console.log(`  ${c.red}-> [BACKRUN] Searcher sells, locking in risk-free profit.${c.reset}`);
   await sleep(1000);
-  console.log(`${c.red}✘ Swap completed. Slippage: 1.0% ($350.00 loss to searcher).${c.reset}\n`);
+  console.log(`${c.red}[ERR] Swap completed. Slippage: 1.0% ($350.00 loss to searcher).${c.reset}\n`);
   await sleep(1500);
 
   // ---- Private Jito Bundle path ----
   console.log(`${c.bold}[Route B] Sentry Private Jito Bundle Submission (MEV Shield)...${c.reset}`);
-  console.log(`${c.green}⚡ Packaging swap with Jito tip of 30,000 lamports (0.00003 SOL)...${c.reset}`);
+  console.log(`${c.green} Packaging swap with Jito tip of 30,000 lamports (0.00003 SOL)...${c.reset}`);
   await sleep(1000);
   console.log(`- Submitting bundle directly to Jito Block Engine (bypassing public mempool)...`);
   await sleep(1000);
-  console.log(`  ${c.green}↳ [Private Execution] Validators execute transactions atomically inside the block.${c.reset}`);
-  console.log(`  ${c.green}↳ [No Frontrunning] Searchers are blind to the transaction prior to inclusion.${c.reset}`);
+  console.log(`  ${c.green}-> [Private Execution] Validators execute transactions atomically inside the block.${c.reset}`);
+  console.log(`  ${c.green}-> [No Frontrunning] Searchers are blind to the transaction prior to inclusion.${c.reset}`);
   await sleep(1000);
-  console.log(`${c.green}✔ Swap landed cleanly at slot 429104100! Slippage: 0.05%.${c.reset}\n`);
+  console.log(`${c.green}[OK] Swap landed cleanly at slot 429104100! Slippage: 0.05%.${c.reset}\n`);
   await sleep(1500);
 
   // ---- Side-by-Side Comparison Table ----
