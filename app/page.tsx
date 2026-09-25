@@ -1156,388 +1156,527 @@ function AutonomousSection() {
 
 
 
-function SystemPrimer() {
-  const [slide, setSlide] = useState(0);
-  const [expanded, setExpanded] = useState(true);
 
-  const slides = [
-    {
-      index: "01",
-      tag: "ROOT CAUSE ANALYSIS",
-      title: "Dropping transactions isn't bad luck.",
-      highlight: "Unaware routing is.",
-      subtitle: "Why Solana mainnet drops standard transactions under peak DEX congestion",
-      quote: "Standard public RPCs broadcast blindly across nodes without knowing which validator holds the slot leader schedule. During DEX volume spikes, overloaded validators drop UDP/QUIC packets before they ever reach the block-builder.",
-      callouts: [
-        { label: "Public RPC Drop Rate", value: "Up to 40%", desc: "Packets discarded before block insertion" },
-        { label: "Static Priority Bids", value: "Pure Guesswork", desc: "Overpaying or getting outbid in micro-bursts" },
-        { label: "Packet Visibility", value: "Zero Traces", desc: "No causal feedback on why bundles miss slots" },
-      ],
-      insight: "On Solana mainnet, landing is not about spamming. It is about stake-weighted priority alignment with the current slot leader.",
-    },
-    {
-      index: "02",
-      tag: "THE SENTRY 2.0 STACK",
-      title: "You don't need higher fees.",
-      highlight: "You need a pipeline that actually lands.",
-      subtitle: "The 3-stage autonomous event loop built on Solami infrastructure",
-      pillars: [
-        {
-          num: "01",
-          name: "Yellowstone & Blur Ingestion",
-          desc: "Sub-slot gRPC telemetry and WebSocket streams capture DEX orderbook swaps and slot leader schedules before blocks seal.",
-        },
-        {
-          num: "02",
-          name: "Deterministic Policy & Groq AI",
-          desc: "Microsecond circuit breakers, slippage bounds, and balance checks filter risk before Groq LPU models compute optimal tip escalation.",
-        },
-        {
-          num: "03",
-          name: "Solami Beam SWQoS Routing",
-          desc: "Direct stake-weighted priority routing to the scheduled validator leader with dynamic Jito bundle tips. Zero dropped packets.",
-        },
-      ],
-      insight: "Every event is policy-evaluated in microseconds. When conditions degrade, Sentry automatically falls back, recalibrates, or trips circuit breakers.",
-    },
-    {
-      index: "03",
-      tag: "OPERATIONAL CAPABILITIES",
-      title: "Not a passive viewing center.",
-      highlight: "An active operator console.",
-      subtitle: "Everything on this dashboard is interactive and directly connected to Solana mainnet",
-      tools: [
-        {
-          title: "Mission Run Profiles",
-          tag: "EXECUTION",
-          desc: "Trigger real mainnet bundle profiles (Safe Transfer, AI Dynamic Tip, Slippage Stress, Congestion Burst) through Solami Beam with live slot progression.",
-          actionText: "Open Mission Profiles →",
-          actionTarget: "#mission-profiles",
-        },
-        {
-          title: "Autonomous Mode Switcher",
-          tag: "RUNTIME",
-          desc: "Switch the live event pipeline between Observe (audit only), Shadow (simulated execution), and Live (real reactive mainnet transactions).",
-          actionText: "Switch Execution Mode →",
-          actionTarget: "#autonomous-mode",
-        },
-        {
-          title: "Live Event Feed (Blur + Yellowstone)",
-          tag: "TELEMETRY",
-          desc: "Watch real-time decoded DEX swaps and liquidity pool events with live opportunity scoring (0–100) and automated policy gating.",
-          actionText: "View Live Event Feed →",
-          actionTarget: "#autonomous-events",
-        },
-        {
-          title: "Fault Injection & Recovery Lab",
-          tag: "RESILIENCE",
-          desc: "Simulate expired blockhashes, zero tips, or rate limit spikes. Sentry detects, classifies, and executes automated recovery with full provenance.",
-          actionText: "Launch Fault Lab →",
-          actionTarget: "#autonomous-lab",
-        },
-      ],
-      insight: "Every tool on this page is interactive. You can inspect live data, test failure recovery, or submit bundles directly to Solana mainnet.",
-    },
-    {
-      index: "04",
-      tag: "DECISION PROVENANCE",
-      title: "Never wonder why a transaction executed,",
-      highlight: "or why it was held back.",
-      subtitle: "End-to-end auditability with immutable execution receipts",
-      chain: [
-        { step: "01", label: "Trigger Event", sub: "Blur swap / Yellowstone signal" },
-        { step: "02", label: "Policy Filter", sub: "Slippage, budget & circuit breaker" },
-        { step: "03", label: "Groq AI Inference", sub: "LPU tip strategy & confidence" },
-        { step: "04", label: "Beam Leader Route", sub: "Direct SWQoS validator delivery" },
-        { step: "05", label: "Execution Receipt", sub: "Immutable slot finality ledger" },
-      ],
-      insight: "Every execution produces an immutable JSONL receipt. Click any receipt to inspect the entire causal chain from trigger to finality.",
-    },
-    {
-      index: "05",
-      tag: "QUICKSTART ROADMAP",
-      title: "Ready to inspect or execute on Mainnet?",
-      highlight: "Start in 3 steps.",
-      subtitle: "How to operate this interface and verify execution results",
-      steps: [
-        {
-          num: "01",
-          title: "Choose Your Operating Mode",
-          desc: "Keep the Autonomous Engine in Observe mode to audit without spending SOL, or toggle to Live mode for real reactive transactions.",
-        },
-        {
-          num: "02",
-          title: "Launch a Profile or Inject a Fault",
-          desc: "Execute a curated transaction profile from the Mission Setup panel, or trigger a classified fault in the Sentry Lab.",
-        },
-        {
-          num: "03",
-          title: "Inspect Terminal & Decision Receipts",
-          desc: "Watch live multi-stage streaming in the Execution Terminal and click into the Execution Receipts panel for full causal traces.",
-        },
-      ],
-      ctas: [
-        { label: "Enter Mission Console ↓", target: "#mission-profiles", primary: true },
-        { label: "Open Autonomous Engine ↓", target: "#autonomous", primary: false },
-        { label: "Inspect Execution Receipts ↓", target: "#autonomous-receipts", primary: false },
-      ],
-    },
-  ];
+type ActiveView = "home" | "autonomous" | "console" | "intelligence";
 
-  const current = slides[slide];
-
+function ExplainerSections({
+  navigateTo,
+}: {
+  navigateTo: (view: ActiveView, hash?: string) => void;
+}) {
   return (
-    <section id="primer" className="mx-auto max-w-7xl px-4 pt-6 pb-2 sm:px-6">
-      <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl overflow-hidden">
-        {/* TOP BAR / TOGGLE */}
-        <div className="border-b-2 border-[#121212] bg-[#F7F4EC] px-4 py-3 sm:px-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-white bg-[#121212] px-2 py-0.5 rounded">
-              {current.index} / 05
+    <div id="explainer-story" className="w-full">
+      {/* ==============================================================
+          EXPLAINER 01: ROOT CAUSE ANALYSIS (LEFT-ALIGNED)
+      ============================================================== */}
+      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-14 items-center">
+          {/* Left Column (Editorial Content) */}
+          <div>
+            <div className="inline-flex items-center gap-2 mb-3">
+              <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+                01 / 05
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                Root Cause Analysis
+              </span>
+            </div>
+
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#121212] tracking-tight leading-[1.08]">
+              Dropping transactions isn't bad luck. <br />
+              <span className="bg-[#121212] text-white px-2.5 py-0.5 rounded-md inline-block my-1">
+                Unaware routing is.
+              </span>
+            </h2>
+
+            <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
+              Why Solana mainnet drops standard transactions under peak DEX congestion.
+            </p>
+
+            <div className="mt-6 border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-xl border-l-4 border-l-[#FF5A26]">
+              <p className="font-serif text-base sm:text-lg italic text-[#121212] leading-relaxed">
+                &quot;Standard public RPCs broadcast blindly across nodes without knowing which validator holds the slot leader schedule. During DEX volume spikes, overloaded validators drop UDP/QUIC packets before they ever reach the block-builder.&quot;
+              </p>
+            </div>
+
+            <div className="mt-6 inline-flex items-center gap-2.5 border border-[#121212]/20 bg-[#F7F4EC] px-3.5 py-2.5 rounded-lg text-xs font-sans text-[#121212]">
+              <Info size={16} weight="bold" className="text-[#FF5A26] shrink-0" />
+              <span>
+                <strong className="font-bold">Key Insight:</strong> On Solana mainnet, landing is not about spamming. It is about stake-weighted priority alignment with the current slot leader.
+              </span>
+            </div>
+          </div>
+
+          {/* Right Column (Visual 3 Problem Stats) */}
+          <div className="space-y-4">
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+                Public RPC Drop Rate
+              </span>
+              <p className="font-serif text-4xl sm:text-5xl font-black text-[#FF5A26] mt-2 leading-none">
+                Up to 40%
+              </p>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                Packets discarded by saturated validator TPU ingress buffers before block insertion.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+                Static Priority Bids
+              </span>
+              <p className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-2 leading-none">
+                Pure Guesswork
+              </p>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                Applications overpay static fees or get outbid in microsecond congestion spikes without live percentile feedback.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+                Packet Visibility
+              </span>
+              <p className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-2 leading-none">
+                Zero Traces
+              </p>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                No causal feedback explaining whether transactions expired, failed simulation, or missed slot deadlines.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==============================================================
+          EXPLAINER 02: THE SENTRY 2.0 STACK (RIGHT-ALIGNED)
+      ============================================================== */}
+      <section className="w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-center">
+          {/* Left Column (Visual Architecture Pillars) */}
+          <div className="order-2 lg:order-1 space-y-4">
+            <div className="border-2 border-[#121212] bg-[#FFFFFF] p-5 rounded-2xl">
+              <span className="font-mono text-xs font-black bg-[#121212] text-white px-2 py-0.5 rounded">
+                01
+              </span>
+              <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
+                Yellowstone & Blur Ingestion
+              </h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                Sub-slot gRPC Geyser telemetry and pre-block decoded DEX swaps capture liquidity dynamics before blocks seal.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FFFFFF] p-5 rounded-2xl">
+              <span className="font-mono text-xs font-black bg-[#121212] text-white px-2 py-0.5 rounded">
+                02
+              </span>
+              <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
+                Deterministic Policy & Groq AI
+              </h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                Microsecond invariant checks (max tip, slippage, circuit breaker) filter risk before Groq LPU models compute optimal tip escalation.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FFFFFF] p-5 rounded-2xl">
+              <span className="font-mono text-xs font-black bg-[#121212] text-white px-2 py-0.5 rounded">
+                03
+              </span>
+              <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
+                Solami Beam SWQoS Routing
+              </h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                Direct stake-weighted priority routing to the scheduled validator leader with dynamic Jito bundle tips. Zero dropped packets.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Column (Content) */}
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 mb-3">
+              <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+                02 / 05
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                The Sentry 2.0 Stack
+              </span>
+            </div>
+
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#121212] tracking-tight leading-[1.08]">
+              You don't need higher fees. <br />
+              <span className="bg-[#FF5A26] text-white px-2.5 py-0.5 rounded-md inline-block my-1">
+                You need a pipeline that actually lands.
+              </span>
+            </h2>
+
+            <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
+              The 3-stage autonomous event loop built on Solami infrastructure.
+            </p>
+
+            <p className="mt-4 font-sans text-sm sm:text-base text-[#121212] leading-relaxed">
+              Sentry continuously calculates leader distance, tip percentile floors, and congestion scores. When network conditions degrade, the engine automatically adapts tips, falls back to direct Jito bundles, or trips safety circuit breakers before spending a single lamport.
+            </p>
+
+            <div className="mt-6 pt-4 border-t-2 border-[#121212]/10 flex flex-wrap gap-2 font-mono text-xs">
+              <span className="border-2 border-[#121212] bg-white px-2.5 py-1 rounded-md font-bold">
+                SWQoS Validator Pipe
+              </span>
+              <span className="border-2 border-[#121212] bg-white px-2.5 py-1 rounded-md font-bold">
+                ~180ms Groq LPU
+              </span>
+              <span className="border-2 border-[#121212] bg-white px-2.5 py-1 rounded-md font-bold">
+                Sub-Slot Geyser
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==============================================================
+          EXPLAINER 03: OPERATIONAL CAPABILITIES (LEFT-ALIGNED)
+      ============================================================== */}
+      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+          {/* Left Column (Content) */}
+          <div>
+            <div className="inline-flex items-center gap-2 mb-3">
+              <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+                03 / 05
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                Operational Capabilities
+              </span>
+            </div>
+
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#121212] tracking-tight leading-[1.08]">
+              Not a passive viewing center. <br />
+              <span className="bg-[#121212] text-white px-2.5 py-0.5 rounded-md inline-block my-1">
+                An active operator console.
+              </span>
+            </h2>
+
+            <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
+              Every tool on this platform is interactive and directly connected to Solana mainnet.
+            </p>
+
+            <p className="mt-4 font-sans text-sm sm:text-base text-[#121212] leading-relaxed">
+              Sentry is built for engineers and operators. You can dispatch real bundles with dynamic tips, toggle autonomous execution modes, watch pre-block DEX swaps stream over WebSockets, and stress-test failure conditions in the resilience lab.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <button
+                onClick={() => navigateTo("console", "#mission-profiles")}
+                className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
+              >
+                <span>Launch Mission Console →</span>
+              </button>
+              <button
+                onClick={() => navigateTo("autonomous")}
+                className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-white transition-colors"
+              >
+                <span>Open Autonomous Engine →</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column (Visual 4 Tool Cards) */}
+          <div className="grid sm:grid-cols-2 gap-3.5">
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-[#FF5A26]/10 text-[#FF5A26] rounded">
+                  EXECUTION
+                </span>
+                <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
+                  Mission Run Profiles
+                </h4>
+                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                  Trigger real mainnet bundles with dynamic tip floors, slippage stress, or congestion burst settings.
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo("console", "#mission-profiles")}
+                className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
+              >
+                Open Profiles →
+              </button>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                  RUNTIME
+                </span>
+                <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
+                  Autonomous Modes
+                </h4>
+                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                  Toggle between Observe (audit only), Shadow (pipeline simulation), and Live (real reactive execution).
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo("autonomous", "#autonomous-mode")}
+                className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
+              >
+                Switch Modes →
+              </button>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded">
+                  TELEMETRY
+                </span>
+                <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
+                  Live Blur DEX Stream
+                </h4>
+                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                  Stream pre-block token swaps with real-time opportunity scoring (0–100) and automated policy gating.
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo("autonomous", "#autonomous-events")}
+                className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
+              >
+                View Stream →
+              </button>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
+              <div>
+                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-amber-50 text-amber-800 rounded">
+                  RESILIENCE
+                </span>
+                <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
+                  Fault Injection Lab
+                </h4>
+                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                  Stress-test expired blockhashes, zero tips, or rate limit spikes and watch Sentry classify & recover.
+                </p>
+              </div>
+              <button
+                onClick={() => navigateTo("autonomous", "#autonomous-lab")}
+                className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
+              >
+                Launch Lab →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==============================================================
+          EXPLAINER 04: DECISION PROVENANCE (RIGHT-ALIGNED)
+      ============================================================== */}
+      <section className="w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-14 items-center">
+          {/* Left Column (Visual Causal Chain Nodes) */}
+          <div className="order-2 lg:order-1 space-y-3">
+            {[
+              { step: "01", name: "Trigger Event", detail: "Blur DEX swap or Yellowstone slot signal", tag: "TRIGGER" },
+              { step: "02", name: "Deterministic Policy", detail: "Circuit breaker, budget ceiling, slippage filter", tag: "POLICY" },
+              { step: "03", name: "Groq AI Inference", detail: "~180ms LPU prompt computing optimal tip strategy", tag: "INFERENCE" },
+              { step: "04", name: "Beam Leader Route", detail: "Stake-weighted priority delivery to validator", tag: "ROUTING" },
+              { step: "05", name: "Execution Receipt", detail: "Immutable slot finality timestamped in JSONL ledger", tag: "RECEIPT" },
+            ].map((node) => (
+              <div key={node.step} className="border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-xs font-black bg-[#121212] text-white px-2 py-0.5 rounded">
+                    {node.step}
+                  </span>
+                  <div>
+                    <p className="font-serif text-sm font-bold text-[#121212]">{node.name}</p>
+                    <p className="font-sans text-[11px] text-[#5A564F]">{node.detail}</p>
+                  </div>
+                </div>
+                <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">
+                  {node.tag}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Right Column (Content) */}
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 mb-3">
+              <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+                04 / 05
+              </span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                Decision Provenance
+              </span>
+            </div>
+
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#121212] tracking-tight leading-[1.08]">
+              Never wonder why a transaction executed, <br />
+              <span className="border-b-4 border-[#FF5A26] pb-0.5 inline-block my-1">
+                or why it was held back.
+              </span>
+            </h2>
+
+            <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
+              End-to-end auditability with immutable on-chain execution receipts.
+            </p>
+
+            <p className="mt-4 font-sans text-sm sm:text-base text-[#121212] leading-relaxed">
+              Every single execution on Sentry generates an immutable JSONL receipt. Click any receipt to inspect the entire causal chain: the originating trigger event, policy invariant evaluations, Groq AI reasoning trace, assigned Beam route, and final confirmation slot.
+            </p>
+
+            <div className="mt-8">
+              <button
+                onClick={() => navigateTo("autonomous", "#autonomous-receipts")}
+                className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-5 font-serif text-xs sm:text-sm font-bold text-[#121212] rounded-xl hover:bg-[#121212] hover:text-white transition-colors"
+              >
+                <ArrowSquareOut size={15} weight="bold" />
+                <span>Inspect Live Receipts →</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==============================================================
+          EXPLAINER 05: QUICKSTART ROADMAP & CTA (CENTER-ALIGNED)
+      ============================================================== */}
+      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-20 sm:py-28 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl text-center">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+              05 / 05
             </span>
-            <span className="font-mono text-[11px] font-bold text-[#FF5A26] uppercase tracking-wider">
-              System Primer & Walkthrough
-            </span>
-            <span className="text-[#121212]/30 hidden sm:inline select-none">•</span>
-            <span className="font-sans text-xs text-[#5A564F] hidden sm:inline">
-              Read before operating the platform
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+              Quickstart Roadmap
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl font-black text-[#121212] tracking-tight leading-[1.08]">
+            Ready to inspect or execute on Mainnet? <br />
+            <span className="bg-[#121212] text-white px-3 py-1 rounded-md inline-block my-2">
+              Start in 3 steps.
+            </span>
+          </h2>
+
+          <p className="mt-4 font-sans text-base sm:text-lg text-[#5A564F] max-w-2xl mx-auto">
+            Access the complete operational suite through the navigation bar or start operating below.
+          </p>
+
+          {/* 3 Step Cards */}
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <div className="h-8 w-8 rounded-full bg-[#121212] text-white flex items-center justify-center font-mono text-xs font-bold mb-4">
+                01
+              </div>
+              <h4 className="font-serif text-lg font-bold text-[#121212]">Choose Operating Mode</h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                Keep the Autonomous Engine in Observe mode to audit without spending SOL, or toggle to Live mode for real reactive transactions.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <div className="h-8 w-8 rounded-full bg-[#121212] text-white flex items-center justify-center font-mono text-xs font-bold mb-4">
+                02
+              </div>
+              <h4 className="font-serif text-lg font-bold text-[#121212]">Run Profile or Inject Fault</h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                Execute a curated transaction profile from the Mission Setup panel, or trigger a classified fault in the Sentry Lab to verify recovery.
+              </p>
+            </div>
+
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
+              <div className="h-8 w-8 rounded-full bg-[#121212] text-white flex items-center justify-center font-mono text-xs font-bold mb-4">
+                03
+              </div>
+              <h4 className="font-serif text-lg font-bold text-[#121212]">Inspect Terminal & Receipts</h4>
+              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+                Watch live multi-stage streaming in the Execution Terminal and click into the Execution Receipts panel for full causal traces.
+              </p>
+            </div>
+          </div>
+
+          {/* Big Action Buttons */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
             <button
-              onClick={() => setExpanded(!expanded)}
-              className="inline-flex items-center gap-1.5 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-[11px] font-bold text-[#121212] rounded-lg hover:bg-[#121212] hover:text-white transition-colors"
+              onClick={() => navigateTo("console", "#mission-profiles")}
+              className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#E84D1C] transition-colors"
             >
-              {expanded ? (
-                <>
-                  <span>Collapse Guide</span>
-                  <CaretUp size={12} weight="bold" />
-                </>
-              ) : (
-                <>
-                  <span>Open System Guide</span>
-                  <CaretDown size={12} weight="bold" />
-                </>
-              )}
+              <Play size={16} weight="fill" />
+              <span>Enter Mission Console →</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo("autonomous")}
+              className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
+            >
+              <span>Open Autonomous Engine →</span>
+            </button>
+
+            <button
+              onClick={() => navigateTo("intelligence", "#evidence")}
+              className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] text-[#121212] px-8 font-serif text-base font-bold rounded-xl hover:bg-[#F7F4EC] transition-colors"
+            >
+              <ArrowSquareOut size={16} weight="bold" />
+              <span>View Proof & Evidence →</span>
             </button>
           </div>
         </div>
-
-        {/* EXPANDABLE BODY */}
-        {expanded && (
-          <div className="p-5 sm:p-8 md:p-10 bg-[#FDFBF7]">
-            {/* PROGRESS STEP TABS */}
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-6 sm:mb-8 overflow-x-auto pb-2 border-b-2 border-[#121212]/10">
-              {slides.map((s, idx) => (
-                <button
-                  key={`slide-tab-${s.index}`}
-                  onClick={() => setSlide(idx)}
-                  className={`shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 font-mono text-xs transition-colors ${
-                    slide === idx
-                      ? "border-[#121212] bg-[#121212] text-white font-bold"
-                      : "border-[#121212]/20 bg-white text-[#5A564F] hover:border-[#121212]"
-                  }`}
-                >
-                  <span className={`font-bold ${slide === idx ? "text-[#FF5A26]" : "text-[#5A564F]"}`}>
-                    {s.index}
-                  </span>
-                  <span className="hidden sm:inline capitalize">{s.tag.toLowerCase()}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* SLIDE CONTENT AREA */}
-            <div className="min-h-[280px] flex flex-col justify-between">
-              <div>
-                {/* Header Tag */}
-                <span className="inline-block font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26] bg-[#FF5A26]/10 px-2.5 py-0.5 rounded-md mb-3 border border-[#FF5A26]/20">
-                  {current.tag}
-                </span>
-
-                {/* Big Editorial Headline */}
-                <h3 className="font-serif text-2xl sm:text-4xl md:text-5xl font-black text-[#121212] tracking-tight leading-[1.1]">
-                  {current.title}{" "}
-                  <span className="bg-[#121212] text-white px-2 py-0.5 rounded-md inline-block my-1">
-                    {current.highlight}
-                  </span>
-                </h3>
-
-                <p className="font-sans text-sm sm:text-base text-[#5A564F] mt-3 max-w-3xl">
-                  {current.subtitle}
-                </p>
-
-                {/* SLIDE 1 SPECIFIC: PROBLEM CALLOUTS */}
-                {slide === 0 && (
-                  <div className="mt-6 space-y-4">
-                    <p className="font-serif text-base sm:text-lg italic text-[#121212] leading-relaxed border-l-4 border-[#FF5A26] pl-4 bg-[#FFFFFF] py-3 pr-4 rounded-r-xl border-2 border-l-4 border-[#121212]">
-                      &quot;{current.quote}&quot;
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                      {current.callouts?.map((c) => (
-                        <div key={c.label} className="border-2 border-[#121212] bg-[#FFFFFF] p-3.5 rounded-xl">
-                          <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">{c.label}</p>
-                          <p className="font-serif text-xl sm:text-2xl font-bold text-[#FF5A26] mt-1">{c.value}</p>
-                          <p className="font-sans text-xs text-[#5A564F] mt-1">{c.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 2 SPECIFIC: 3 PILLARS */}
-                {slide === 1 && (
-                  <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                    {current.pillars?.map((p) => (
-                      <div key={p.num} className="border-2 border-[#121212] bg-[#FFFFFF] p-4 sm:p-5 rounded-xl flex flex-col justify-between">
-                        <div>
-                          <span className="font-mono text-xs font-black text-[#FF5A26] bg-[#121212] text-white px-2 py-0.5 rounded">
-                            {p.num}
-                          </span>
-                          <h4 className="font-serif text-base sm:text-lg font-bold text-[#121212] mt-3 leading-snug">
-                            {p.name}
-                          </h4>
-                          <p className="font-sans text-xs leading-relaxed text-[#5A564F] mt-2">
-                            {p.desc}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* SLIDE 3 SPECIFIC: 4 ACTIONABLE TOOLS */}
-                {slide === 2 && (
-                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {current.tools?.map((tool) => (
-                      <div key={tool.title} className="border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl flex flex-col justify-between">
-                        <div>
-                          <span className="font-mono text-[9px] font-bold uppercase text-[#FF5A26] bg-[#FF5A26]/10 px-1.5 py-0.5 rounded">
-                            {tool.tag}
-                          </span>
-                          <h4 className="font-serif text-sm font-bold text-[#121212] mt-2 leading-tight">
-                            {tool.title}
-                          </h4>
-                          <p className="font-sans text-[11px] leading-relaxed text-[#5A564F] mt-1.5">
-                            {tool.desc}
-                          </p>
-                        </div>
-                        <a
-                          href={tool.actionTarget}
-                          className="mt-4 inline-flex items-center text-xs font-mono font-bold text-[#121212] hover:text-[#FF5A26] transition-colors"
-                        >
-                          {tool.actionText}
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* SLIDE 4 SPECIFIC: DECISION PROVENANCE CHAIN */}
-                {slide === 3 && (
-                  <div className="mt-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
-                      {current.chain?.map((c) => (
-                        <div key={c.step} className="border-2 border-[#121212] bg-[#FFFFFF] p-3.5 rounded-xl">
-                          <span className="font-mono text-[10px] font-black text-[#FF5A26]">
-                            STAGE {c.step}
-                          </span>
-                          <h4 className="font-serif text-sm font-bold text-[#121212] mt-1 leading-tight">
-                            {c.label}
-                          </h4>
-                          <p className="font-sans text-[11px] text-[#5A564F] mt-1">
-                            {c.sub}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* SLIDE 5 SPECIFIC: 3 STEPS + CALL TO ACTION */}
-                {slide === 4 && (
-                  <div className="mt-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                      {current.steps?.map((step) => (
-                        <div key={step.num} className="border-2 border-[#121212] bg-[#FFFFFF] p-4 sm:p-5 rounded-xl">
-                          <div className="h-7 w-7 rounded-full bg-[#121212] text-white flex items-center justify-center font-mono text-xs font-bold mb-3">
-                            {step.num}
-                          </div>
-                          <h4 className="font-serif text-base font-bold text-[#121212]">
-                            {step.title}
-                          </h4>
-                          <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
-                            {step.desc}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* ACTION CTA BUTTONS */}
-                    <div className="pt-2 flex flex-wrap items-center gap-3">
-                      {current.ctas?.map((cta) => (
-                        <a
-                          key={cta.label}
-                          href={cta.target}
-                          className={`inline-flex h-11 items-center justify-center px-5 font-serif text-sm font-bold rounded-xl transition-colors border-2 border-[#121212] ${
-                            cta.primary
-                              ? "bg-[#FF5A26] text-white hover:bg-[#E84D1C]"
-                              : "bg-[#FFFFFF] text-[#121212] hover:bg-[#F7F4EC]"
-                          }`}
-                        >
-                          {cta.label}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Key Insight strip */}
-                {current.insight && slide !== 4 && (
-                  <div className="mt-5 border border-[#121212]/15 bg-[#FFFFFF] px-4 py-2.5 rounded-lg flex items-center gap-2.5">
-                    <Info size={16} weight="bold" className="text-[#FF5A26] shrink-0" />
-                    <p className="font-sans text-xs text-[#121212]">
-                      <strong className="font-bold">Key Insight:</strong> {current.insight}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* FOOTER NAVIGATION CONTROLS */}
-              <div className="mt-8 pt-4 border-t-2 border-[#121212]/10 flex flex-wrap items-center justify-between gap-3">
-                <span className="font-mono text-xs text-[#5A564F]">
-                  Step {slide + 1} of {slides.length} • Use buttons to navigate
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setSlide((prev) => Math.max(0, prev - 1))}
-                    disabled={slide === 0}
-                    className="inline-flex h-9 items-center gap-1 border-2 border-[#121212] bg-[#FFFFFF] px-3.5 font-mono text-xs font-bold text-[#121212] rounded-lg hover:bg-[#121212] hover:text-white transition-colors disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-[#121212]"
-                  >
-                    <CaretLeft size={14} weight="bold" />
-                    <span>Previous</span>
-                  </button>
-
-                  <button
-                    onClick={() => setSlide((prev) => Math.min(slides.length - 1, prev + 1))}
-                    disabled={slide === slides.length - 1}
-                    className="inline-flex h-9 items-center gap-1 border-2 border-[#121212] bg-[#121212] px-4 font-mono text-xs font-bold text-white rounded-lg hover:bg-[#FF5A26] transition-colors disabled:opacity-40 disabled:hover:bg-[#121212]"
-                  >
-                    <span>Next</span>
-                    <CaretRight size={14} weight="bold" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 
 export default function Home() {
+  const [activeView, setActiveView] = useState<ActiveView>("home");
+
+  const navigateTo = useCallback((view: ActiveView, hash?: string) => {
+    setActiveView(view);
+    setMobileMenuOpen(false);
+    if (hash) {
+      window.location.hash = hash;
+      setTimeout(() => {
+        const el = document.getElementById(hash.replace("#", ""));
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }, 70);
+    } else {
+      window.location.hash = view === "home" ? "" : view;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (
+        hash.includes("autonomous") ||
+        hash === "#autonomous-health" ||
+        hash === "#autonomous-mode" ||
+        hash === "#autonomous-events" ||
+        hash === "#autonomous-receipts" ||
+        hash === "#autonomous-lab"
+      ) {
+        setActiveView("autonomous");
+      } else if (
+        hash === "#terminal" ||
+        hash === "#mission-profiles" ||
+        hash === "#lifecycle" ||
+        hash === "#console"
+      ) {
+        setActiveView("console");
+      } else if (
+        hash === "#agent" ||
+        hash === "#evidence" ||
+        hash === "#stack" ||
+        hash === "#intelligence"
+      ) {
+        setActiveView("intelligence");
+      } else if (hash === "#overview" || hash === "#home" || hash === "#primer" || !hash) {
+        setActiveView("home");
+      }
+    };
+
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
   const { connectors, connect, disconnect, wallet, status } =
     useWalletConnection();
   const [snapshot, setSnapshot] = useState<ObservatorySnapshot | null>(null);
@@ -1835,7 +1974,7 @@ export default function Home() {
       {/* TOP NAV BAR */}
       <header className="sticky top-0 z-50 border-b-2 border-[#121212] bg-[#F7F4EC]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <a href="/" className="flex items-center gap-3 shrink-0">
+          <button onClick={() => navigateTo("home")} className="flex items-center gap-3 shrink-0 text-left">
             <div className="h-8 w-8 rounded-full bg-[#121212] flex items-center justify-center text-white font-serif text-sm font-bold">
               S/
             </div>
@@ -1847,185 +1986,196 @@ export default function Home() {
                 /sentry@solami.io
               </span>
             </div>
-          </a>
+          </button>
 
           {/* Desktop Navigation Links with Nested Hover Dropdowns */}
           <nav className="hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
-            {/* 1. Primer */}
-            <a href="#primer" className="hover:text-[#FF5A26] transition-colors py-1 flex items-center gap-1 font-bold">
-              <span>Primer</span>
-            </a>
+            {/* Overview / Story */}
+            <button
+              onClick={() => navigateTo("home")}
+              className={`hover:text-[#FF5A26] transition-colors py-1 flex items-center gap-1 font-bold ${
+                activeView === "home" ? "text-[#FF5A26]" : "text-[#121212]"
+              }`}
+            >
+              <span>Overview</span>
+            </button>
 
             <span className="text-[#121212]/20 select-none">•</span>
 
-            {/* 2. Autonomous Engine (Nested Hover Dropdown) */}
+            {/* Autonomous Engine (Nested Hover Dropdown) */}
             <div className="relative group py-1">
-              <a
-                href="#autonomous"
-                className="flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer"
+              <button
+                onClick={() => navigateTo("autonomous")}
+                className={`flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer font-bold ${
+                  activeView === "autonomous" ? "text-[#FF5A26]" : "text-[#121212]"
+                }`}
               >
                 <span>Autonomous Engine</span>
                 <CaretDown size={12} weight="bold" className="group-hover:rotate-180 transition-transform text-[#FF5A26]" />
-              </a>
+              </button>
 
               {/* Dropdown Menu */}
               <div className="absolute top-full left-0 pt-2 hidden group-hover:block z-50 min-w-[280px]">
                 <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-xl p-2.5 shadow-none space-y-1">
-                  <a
-                    href="#autonomous-health"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  <button
+                    onClick={() => navigateTo("autonomous", "#autonomous-health")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">System Health</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">CIRCUIT_BREAKER</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Live status of Yellowstone, Blur, Beam & RPC</p>
-                  </a>
-                  <a
-                    href="#autonomous-mode"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("autonomous", "#autonomous-mode")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Mode</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">OBSERVE / SHADOW / LIVE</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Switch autonomous reactive execution modes</p>
-                  </a>
-                  <a
-                    href="#autonomous-events"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("autonomous", "#autonomous-events")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Live Event Feed</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800">STREAMING</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Decoded Blur DEX swaps & Yellowstone telemetry</p>
-                  </a>
-                  <a
-                    href="#autonomous-receipts"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("autonomous", "#autonomous-receipts")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Receipts</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">PROVENANCE</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Inspect full causal decision traces & receipts</p>
-                  </a>
-                  <a
-                    href="#autonomous-lab"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("autonomous", "#autonomous-lab")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Fault Injection Lab</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-800">TEST_LAB</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Inject expired blockhash, low tip & observe recovery</p>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
 
             <span className="text-[#121212]/20 select-none">•</span>
 
-            {/* 3. Mission Console (Nested Hover Dropdown) */}
+            {/* Mission Console (Nested Hover Dropdown) */}
             <div className="relative group py-1">
-              <a
-                href="#mission-profiles"
-                className="flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer"
+              <button
+                onClick={() => navigateTo("console")}
+                className={`flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer font-bold ${
+                  activeView === "console" ? "text-[#FF5A26]" : "text-[#121212]"
+                }`}
               >
                 <span>Mission Console</span>
                 <CaretDown size={12} weight="bold" className="group-hover:rotate-180 transition-transform text-[#FF5A26]" />
-              </a>
+              </button>
 
               {/* Dropdown Menu */}
               <div className="absolute top-full left-0 pt-2 hidden group-hover:block z-50 min-w-[270px]">
                 <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-xl p-2.5 shadow-none space-y-1">
-                  <a
-                    href="#mission-profiles"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  <button
+                    onClick={() => navigateTo("console", "#mission-profiles")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Run Profiles</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">5_PROFILES</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Select and execute configured mainnet bundles</p>
-                  </a>
-                  <a
-                    href="#terminal"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("console", "#terminal")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Terminal</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">LIVE_SSE</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Multi-stage streaming terminal & slot telemetry</p>
-                  </a>
-                  <a
-                    href="#lifecycle"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("console", "#lifecycle")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Lifecycle Stages</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">FINALITY</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Processed → Confirmed → Finalized slot timings</p>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
 
             <span className="text-[#121212]/20 select-none">•</span>
 
-            {/* 4. Intelligence & Audit (Nested Hover Dropdown) */}
+            {/* Intelligence & Audit (Nested Hover Dropdown) */}
             <div className="relative group py-1">
-              <a
-                href="#agent"
-                className="flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer"
+              <button
+                onClick={() => navigateTo("intelligence")}
+                className={`flex items-center gap-1 hover:text-[#FF5A26] transition-colors py-1 cursor-pointer font-bold ${
+                  activeView === "intelligence" ? "text-[#FF5A26]" : "text-[#121212]"
+                }`}
               >
                 <span>Intelligence & Audit</span>
                 <CaretDown size={12} weight="bold" className="group-hover:rotate-180 transition-transform text-[#FF5A26]" />
-              </a>
+              </button>
 
               {/* Dropdown Menu */}
               <div className="absolute top-full left-0 pt-2 hidden group-hover:block z-50 min-w-[270px]">
                 <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-xl p-2.5 shadow-none space-y-1">
-                  <a
-                    href="#agent"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  <button
+                    onClick={() => navigateTo("intelligence", "#agent")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">AI Decision Trail</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">GROQ_LPU</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Groq LPU reasoning traces, confidence & risk</p>
-                  </a>
-                  <a
-                    href="#evidence"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#evidence")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Verifiable Evidence</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">JSONL_LOGS</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Immutable onchain receipts and audit ledger</p>
-                  </a>
-                  <a
-                    href="#stack"
-                    className="block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
+                  </button>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#stack")}
+                    className="w-full block p-2 rounded-lg hover:bg-[#F7F4EC] transition-colors text-left"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Architecture Stack</span>
                       <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">SYSTEM_DESIGN</span>
                     </div>
                     <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Deep architectural breakdown of components</p>
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
 
             <span className="text-[#121212]/20 select-none">•</span>
 
-            {/* 5. Docs Link */}
+            {/* Docs Link */}
             <a
               href="https://sentry-doc.vercel.app/"
               target="_blank"
@@ -2071,110 +2221,95 @@ export default function Home() {
         {mobileMenuOpen && (
           <div className="lg:hidden border-t-2 border-[#121212] bg-[#FDFBF7] p-4 max-h-[80vh] overflow-y-auto space-y-4">
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Getting Started</p>
-              <div className="mt-1 space-y-1">
-                <a
-                  href="#primer"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm font-bold text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  System Primer & Walkthrough
-                </a>
-              </div>
+              <button
+                onClick={() => navigateTo("home")}
+                className="block w-full text-left font-serif text-base font-bold text-[#121212] py-1 hover:text-[#FF5A26]"
+              >
+                ← Overview & Story
+              </button>
             </div>
 
             <div>
               <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Autonomous Engine</p>
               <div className="mt-1 space-y-1">
-                <a
-                  href="#autonomous-health"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                <button
+                  onClick={() => navigateTo("autonomous", "#autonomous-health")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   System Health & Circuit Breaker
-                </a>
-                <a
-                  href="#autonomous-mode"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("autonomous", "#autonomous-mode")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Execution Mode (Observe / Shadow / Live)
-                </a>
-                <a
-                  href="#autonomous-events"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("autonomous", "#autonomous-events")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Live Blur + Yellowstone Feed
-                </a>
-                <a
-                  href="#autonomous-receipts"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("autonomous", "#autonomous-receipts")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Execution Receipts & Provenance
-                </a>
-                <a
-                  href="#autonomous-lab"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("autonomous", "#autonomous-lab")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Fault Injection Lab
-                </a>
+                </button>
               </div>
             </div>
 
             <div>
               <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Mission Console</p>
               <div className="mt-1 space-y-1">
-                <a
-                  href="#mission-profiles"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                <button
+                  onClick={() => navigateTo("console", "#mission-profiles")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Transaction Run Profiles
-                </a>
-                <a
-                  href="#terminal"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("console", "#terminal")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Execution Stream Terminal
-                </a>
-                <a
-                  href="#lifecycle"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("console", "#lifecycle")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Lifecycle Confirmation Stages
-                </a>
+                </button>
               </div>
             </div>
 
             <div>
               <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Intelligence & Proof</p>
               <div className="mt-1 space-y-1">
-                <a
-                  href="#agent"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                <button
+                  onClick={() => navigateTo("intelligence", "#agent")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Groq AI Decision Trail
-                </a>
-                <a
-                  href="#evidence"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("intelligence", "#evidence")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   Evidence & Audit Logs
-                </a>
-                <a
-                  href="#stack"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
+                </button>
+                <button
+                  onClick={() => navigateTo("intelligence", "#stack")}
+                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
                 >
                   The Sentry 2.0 Stack
-                </a>
+                </button>
               </div>
             </div>
 
@@ -2194,16 +2329,17 @@ export default function Home() {
           </div>
         )}
       </header>
-
-      {/* SYSTEM PRIMER SECTION */}
-      <SystemPrimer />
-
-      {/* HERO SECTION: DUAL-TONE SPLIT */}
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl grid lg:grid-cols-[1.15fr_0.85fr]">
+      {/* ================================================================
+          1. HOMEPAGE VIEW: FULLSCREEN HERO + ALTERNATING EXPLAINERS
+      ================================================================ */}
+      {activeView === "home" && (
+        <>
+          {/* HERO SECTION: DUAL-TONE SPLIT */}
+      <section className="w-full min-h-[calc(100vh-65px)] border-b-2 border-[#121212] bg-[#FFFFFF]">
+        <div className="w-full min-h-[calc(100vh-65px)] grid lg:grid-cols-[1.15fr_0.85fr]">
           
           {/* LEFT PANEL: Warm Cream Editorial Showcase */}
-          <div className="relative p-6 sm:p-10 md:p-12 flex flex-col justify-between bg-[#FDFBF7] rounded-l-2xl">
+          <div className="relative p-6 sm:p-10 md:p-14 lg:p-16 flex flex-col justify-between bg-[#FDFBF7] border-b-2 lg:border-b-0 lg:border-r-2 border-[#121212]">
             <div>
               {/* Kicker tag */}
               <div className="flex items-center gap-2 mb-6">
@@ -2420,37 +2556,117 @@ export default function Home() {
         </div>
       </section>
 
-      {/* DID YOU KNOW? CALLOUT */}
-      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-        <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl rounded-tr-[52px] p-6 sm:p-10">
-          <div className="absolute top-0 left-0 right-12 h-2.5 bg-[#121212] rounded-tl-xl" />
+          {/* 5 ALTERNATING ZIG-ZAG EXPLAINER SECTIONS */}
+          <ExplainerSections navigateTo={navigateTo} />
 
-          {/* Left Quote Badge */}
-          <div className="absolute -top-5 -left-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            “
-          </div>
+          {/* EDITORIAL FOOTER */}
+          <footer className="w-full border-t-2 border-[#121212] bg-[#F7F4EC] py-14 px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-6">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-[#121212] flex items-center justify-center text-white font-serif text-sm font-bold">
+                  S/
+                </div>
+                <div>
+                  <p className="font-serif text-sm font-bold text-[#121212]">Sentry 2.0 Stack Co.</p>
+                  <p className="font-mono text-[10px] text-[#5A564F]">Autonomous Solana Transaction Infrastructure</p>
+                </div>
+              </div>
 
-          <div className="max-w-3xl my-2">
-            <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] tracking-tight">
-              DID YOU KNOW?
-            </h2>
-            <p className="mt-3 font-sans text-base sm:text-lg text-[#121212] leading-relaxed">
-              Standard RPC broadcast drops up to <strong className="font-bold">40%</strong> of Solana transactions during network congestion. Sentry 2.0 routes directly through <strong className="text-[#FF5A26] font-bold">Solami Beam</strong> with live Yellowstone slot leader indexing and dynamic Jito tips, guaranteeing inclusion with zero drops.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#121212] px-4 py-1.5 text-white font-sans text-xs font-bold">
-              <span>Autonomous Mainnet Routing</span>
-              <Lightning size={13} weight="fill" className="text-[#FF5A26]" />
+              <div className="flex flex-wrap items-center gap-5 sm:gap-7 font-serif text-xs font-bold text-[#121212]">
+                <button
+                  onClick={() => navigateTo("autonomous")}
+                  className="hover:text-[#FF5A26] transition-colors"
+                >
+                  Autonomous Engine
+                </button>
+                <button
+                  onClick={() => navigateTo("console")}
+                  className="hover:text-[#FF5A26] transition-colors"
+                >
+                  Mission Console
+                </button>
+                <button
+                  onClick={() => navigateTo("intelligence")}
+                  className="hover:text-[#FF5A26] transition-colors"
+                >
+                  Intelligence & Proof
+                </button>
+                <a
+                  href="https://sentry-doc.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#FF5A26] hover:underline"
+                >
+                  Documentation ↗
+                </a>
+              </div>
+            </div>
+          </footer>
+        </>
+      )}
+
+      {/* ================================================================
+          2. OPERATIONAL VIEWS (ACCESSED VIA NAVBAR / CTAs)
+      ================================================================ */}
+      {activeView !== "home" && (
+        <div className="w-full min-h-screen">
+          {/* SUBHEADER BREADCRUMB & VIEW SWITCHER BAR */}
+          <div className="sticky top-[65px] z-30 border-b-2 border-[#121212] bg-[#FFFFFF] px-4 py-3 sm:px-6 shadow-none">
+            <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
+              <button
+                onClick={() => navigateTo("home")}
+                className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-[#121212] hover:text-[#FF5A26] transition-colors"
+              >
+                <CaretLeft size={14} weight="bold" />
+                <span>← Return to Home Overview</span>
+              </button>
+
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  onClick={() => navigateTo("autonomous")}
+                  className={`px-3 py-1.5 font-mono text-xs font-bold rounded-lg border-2 transition-colors ${
+                    activeView === "autonomous"
+                      ? "border-[#121212] bg-[#121212] text-white"
+                      : "border-[#121212]/20 bg-white text-[#5A564F] hover:border-[#121212]"
+                  }`}
+                >
+                  Autonomous Engine
+                </button>
+                <button
+                  onClick={() => navigateTo("console")}
+                  className={`px-3 py-1.5 font-mono text-xs font-bold rounded-lg border-2 transition-colors ${
+                    activeView === "console"
+                      ? "border-[#121212] bg-[#121212] text-white"
+                      : "border-[#121212]/20 bg-white text-[#5A564F] hover:border-[#121212]"
+                  }`}
+                >
+                  Mission Console
+                </button>
+                <button
+                  onClick={() => navigateTo("intelligence")}
+                  className={`px-3 py-1.5 font-mono text-xs font-bold rounded-lg border-2 transition-colors ${
+                    activeView === "intelligence"
+                      ? "border-[#121212] bg-[#121212] text-white"
+                      : "border-[#121212]/20 bg-white text-[#5A564F] hover:border-[#121212]"
+                  }`}
+                >
+                  Intelligence & Proof
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Right Quote Badge */}
-          <div className="absolute -bottom-5 -right-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            ”
-          </div>
-        </div>
-      </section>
+          {/* VIEW: AUTONOMOUS ENGINE */}
+          {activeView === "autonomous" && (
+            <div className="py-6">
+              <AutonomousSection />
+            </div>
+          )}
 
-      {/* METRICS OVERVIEW CARDS */}
+          {/* VIEW: MISSION CONSOLE */}
+          {activeView === "console" && (
+            <div className="py-6 space-y-6">
+              {/* METRICS OVERVIEW CARDS */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {metrics.map((metric) => (
@@ -2472,7 +2688,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* MISSION SETUP & RUN PROFILES */}
+              {/* MISSION SETUP & RUN PROFILES */}
       <section id="mission-profiles" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -2548,7 +2764,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TERMINAL & SLOT STREAM */}
+              {/* TERMINAL & SLOT STREAM */}
       <section id="terminal" ref={terminalRef} className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid lg:grid-cols-[1.2fr_0.8fr] gap-6">
           
@@ -2654,7 +2870,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 20-RUN LIFECYCLE MATRIX & DETAIL INSPECTOR */}
+              {/* 20-RUN LIFECYCLE MATRIX & DETAIL INSPECTOR */}
       <section id="lifecycle" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -2826,8 +3042,13 @@ export default function Home() {
           )}
         </div>
       </section>
+            </div>
+          )}
 
-      {/* GROQ AI AGENT DECISION TRAIL */}
+          {/* VIEW: INTELLIGENCE & AUDIT */}
+          {activeView === "intelligence" && (
+            <div className="py-6 space-y-6">
+              {/* GROQ AI AGENT DECISION TRAIL */}
       <section id="agent" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex items-center gap-3 mb-6">
@@ -2904,7 +3125,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* EVIDENCE & VERIFICATION */}
+              {/* EVIDENCE & VERIFICATION */}
       <section id="evidence" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="relative border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl rounded-tr-[52px] p-6 sm:p-10">
           <div className="absolute top-0 left-0 right-12 h-2.5 bg-[#FF5A26] rounded-tl-xl" />
@@ -2953,7 +3174,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CORE ARCHITECTURE STACK */}
+              {/* CORE ARCHITECTURE STACK */}
       <section id="stack" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="mb-6">
@@ -2988,6 +3209,10 @@ export default function Home() {
           </div>
         </div>
       </section>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* SUBMISSION LIVE POPUP MODAL */}
       {submissionModalOpen && (
@@ -3198,12 +3423,6 @@ export default function Home() {
           </div>
         </div>
       )}
-    
-      {/* ================================================================
-          AUTONOMOUS CONTROL CENTER
-          Live event-driven pipeline: Event -> Policy -> AI -> Beam -> Observe
-      ================================================================ */}
-      <AutonomousSection />
 
     </main>
   );
