@@ -2,7 +2,7 @@
 // The central orchestrator: Event -> Policy -> Action -> Lifecycle -> Evidence.
 // This is what makes Sentry an autonomous execution system.
 
-import { Keypair } from "@solana/web3.js";
+import { Keypair, Connection } from "@solana/web3.js";
 import bs58 from "bs58";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
@@ -182,7 +182,7 @@ Respond ONLY with a JSON object:
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-20b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
         max_tokens: 200,
@@ -204,7 +204,7 @@ Respond ONLY with a JSON object:
       confidence: parsed.confidence ?? 0.7,
       tipMultiplier: parsed.tipMultiplier,
       reasoning: parsed.reasoning ?? "AI analysis complete.",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       generatedAt: new Date().toISOString(),
     };
   } catch {
@@ -316,6 +316,34 @@ export async function processEvent(event: SentryEvent): Promise<ExecutionReceipt
   }
 
   const faultType = event.decoded.faultType as string | undefined;
+
+  // Safety balance guard: protect wallet from rent-exemption violation
+  try {
+    const conn = new Connection(rpcUrl, "confirmed");
+    const bal = await conn.getBalance(keypair.publicKey, "confirmed");
+    const RENT_FLOOR = 650_240;
+    const SAFETY_BUFFER = 35_000;
+    if (bal < RENT_FLOOR + SAFETY_BUFFER && !faultType) {
+      receipt.finalStatus = "shadow";
+      receipt.currentStage = "blocked";
+      receipt.completedAt = new Date().toISOString();
+      receipt.durationMs = Date.now() - new Date(startedAt).getTime();
+      receipt.failureAnalysis = {
+        class: "insufficient_funds",
+        recovery: "abort_do_not_retry",
+        retryable: false,
+        description: `Wallet balance (${bal} lamports) is near Solana rent floor (${RENT_FLOOR}). Diverted to shadow mode to protect wallet.`,
+        retriesAttempted: 0,
+      };
+      await persistReceipt(receipt);
+      recentReceipts.unshift(receipt);
+      if (recentReceipts.length > MAX_RECEIPT_BUFFER) recentReceipts.pop();
+      eventBus.emit("receipt_final", receipt);
+      return receipt;
+    }
+  } catch {
+    // continue if balance check network call times out
+  }
   let lastError = "";
   const MAX_RETRIES = 2;
 

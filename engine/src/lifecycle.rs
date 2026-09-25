@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
-use tracing::{info, warn, error};
-
-
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum BundleStatus {
@@ -15,7 +13,7 @@ pub enum BundleStatus {
     Failed,
     Invalid,
 }
- 
+
 impl std::fmt::Display for BundleStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -25,7 +23,7 @@ impl std::fmt::Display for BundleStatus {
             BundleStatus::Failed => write!(f, "Failed"),
             BundleStatus::Invalid => write!(f, "Invalid"),
         }
-    } 
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,7 +46,7 @@ pub struct BundleRun {
     pub finalized_at: Option<DateTime<Utc>>,
     pub confirmation_source: Option<String>,
 
-    // Failure classification 
+    // Failure classification
     pub failure_type: Option<String>,
     pub failure_stage: Option<String>,
     pub recovery: Option<String>,
@@ -115,7 +113,10 @@ pub fn log_run(run: &BundleRun) {
             if let Err(e) = writeln!(file, "{}", json) {
                 error!("Failed to write lifecycle log: {}", e);
             } else {
-                info!("Logged run #{} -> {} | status={}", run.run_number, run.bundle_id, run.status);
+                info!(
+                    "Logged run #{} -> {} | status={}",
+                    run.run_number, run.bundle_id, run.status
+                );
             }
         }
         Err(e) => {
@@ -131,7 +132,11 @@ pub fn log_run(run: &BundleRun) {
         return;
     }
     let project_log = logs_dir.join("lifecycle_log.jsonl");
-    match OpenOptions::new().create(true).append(true).open(&project_log) {
+    match OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&project_log)
+    {
         Ok(mut file) => {
             if let Err(e) = writeln!(file, "{}", json) {
                 warn!("Failed to write project lifecycle log: {}", e);
@@ -164,7 +169,11 @@ pub async fn track_bundle(
             error!("Cannot parse signature for lifecycle tracking: {}", e);
             run.status = BundleStatus::Failed;
             run.error_reason = Some(format!("Invalid signature: {}", e));
-            run.classify_failure("invalid_signature", "pre-tracking", "Check transaction construction");
+            run.classify_failure(
+                "invalid_signature",
+                "pre-tracking",
+                "Check transaction construction",
+            );
             return;
         }
     };
@@ -242,8 +251,7 @@ pub async fn track_bundle(
                             run.status = BundleStatus::Landed;
                             run.landed_at = Some(run.confirmed_at.unwrap());
                             if run.confirmation_source.is_none() {
-                                run.confirmation_source =
-                                    Some("rpc_polling_fallback".to_string());
+                                run.confirmation_source = Some("rpc_polling_fallback".to_string());
                             }
                             info!(
                                 "Bundle landed on-chain at slot {} (poll {}/{})",
@@ -290,8 +298,6 @@ pub async fn track_bundle(
         }
 
         // 2. If not yet processed, check provider-specific inflight status.
-        // This is only available for Jito (getInflightBundleStatuses).
-        // Beam uses the Solana RPC confirmation path exclusively.
         let is_jito = tx_provider_url.contains("jito") || tx_provider_url.contains("block-engine");
         if run.processed_at.is_none() && is_jito {
             let inflight_url = format!(

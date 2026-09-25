@@ -544,9 +544,9 @@ function getGroqModels() {
   }
 
   return [
-    env("GROQ_MODEL_PRIMARY") ?? "openai/gpt-oss-120b",
-    env("GROQ_MODEL_BACKUP") ?? "llama-3.3-70b-versatile",
-    env("GROQ_MODEL_TERTIARY") ?? "llama-3.1-8b-instant",
+    env("GROQ_MODEL_PRIMARY") ?? "openai/gpt-oss-20b",
+    env("GROQ_MODEL_BACKUP") ?? "qwen/qwen3.8-27b",
+    env("GROQ_MODEL_TERTIARY") ?? "openai/gpt-oss-120b",
   ].filter(Boolean);
 }
 
@@ -556,12 +556,13 @@ function clampTip(value: number, floor: number) {
 }
 
 function extractJson(text: string) {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) {
     throw new Error("Model did not return JSON");
   }
-  return JSON.parse(text.slice(start, end + 1)) as Partial<AgentDecision>;
+  return JSON.parse(cleaned.slice(start, end + 1)) as Partial<AgentDecision>;
 }
 
 async function getAgentDecision(
@@ -574,6 +575,12 @@ async function getAgentDecision(
   onLog?: LogSink
 ) {
   const apiKey = env("GROQ_API_KEY");
+  const SOLANA_RENT_EXEMPT_RESERVE = 650_240;
+  const TX_FEE_BUFFER = 5_000;
+  const spendableLamports = Math.max(
+    0,
+    input.balanceLamports - SOLANA_RENT_EXEMPT_RESERVE - TX_FEE_BUFFER
+  );
   const recentRuns = input.runs.slice(0, 6).map((run) => ({
     run_number: run.run_number,
     status: run.status,
@@ -593,15 +600,16 @@ async function getAgentDecision(
       created_at: new Date().toISOString(),
       model: "local-policy",
       fallback: true,
-      action: "submit",
+      action: spendableLamports >= input.baseTipLamports ? "submit" : "hold",
       recommended_tip_lamports: clampTip(
         input.baseTipLamports,
         input.baseTipLamports
       ),
-      confidence: 0.54,
-      reason:
-        "GROQ_API_KEY is not set, so the local policy used the live tip floor.",
-      observed_risk: "AI unavailable",
+      confidence: 0.75,
+      reason: spendableLamports >= input.baseTipLamports
+        ? "GROQ_API_KEY is not set; local policy used live tip floor."
+        : `Wallet balance (${(input.balanceLamports / 1e9).toFixed(6)} SOL) is near rent-exempt floor (${SOLANA_RENT_EXEMPT_RESERVE} lamports). Top-up required.`,
+      observed_risk: spendableLamports >= input.baseTipLamports ? "AI unavailable" : "Insufficient spendable lamports for rent exemption",
     });
   }
 
@@ -616,16 +624,20 @@ async function getAgentDecision(
       observed_risk: "short sentence",
     },
     constraints: [
+      "Solana accounts require 650,240 lamports for rent exemption. Balance cannot fall below this floor without failing simulation.",
+      "If spendable balance (wallet_balance - 650,240 rent - 5,000 tx fee) is below the base tip, action MUST be 'hold'.",
       "Never recommend below the current base tip.",
       "Avoid spending more than 5 percent of wallet balance on one tip.",
-      "Prefer submit when recent landed rate is healthy.",
+      "Prefer submit when recent landed rate is healthy and spendable balance is sufficient.",
       "Prefer retry after rate limits or pending submissions.",
-      "Prefer hold only when balance is too low or recent failures dominate.",
+      "Prefer hold when balance is too low or recent failures dominate.",
     ],
     state: {
       base_tip_lamports: input.baseTipLamports,
       jito_p75_source_lamports: input.sourceTipLamports,
       wallet_balance_lamports: input.balanceLamports,
+      rent_exempt_reserve_lamports: SOLANA_RENT_EXEMPT_RESERVE,
+      spendable_lamports: spendableLamports,
       summary,
       recent_runs: recentRuns,
     },
@@ -651,6 +663,7 @@ async function getAgentDecision(
             model,
             temperature: 0.1,
             max_tokens: 360,
+            response_format: { type: "json_object" },
             messages: [
               {
                 role: "system",
@@ -731,15 +744,16 @@ async function getAgentDecision(
     created_at: new Date().toISOString(),
     model: "local-policy-after-groq-failure",
     fallback: true,
-    action: "submit",
+    action: spendableLamports >= input.baseTipLamports ? "submit" : "hold",
     recommended_tip_lamports: clampTip(
       input.baseTipLamports,
       input.baseTipLamports
     ),
-    confidence: 0.5,
-    reason:
-      "All Groq model attempts failed, so the local policy used the live tip floor.",
-    observed_risk: lastError || "Groq model chain unavailable",
+    confidence: 0.75,
+    reason: spendableLamports >= input.baseTipLamports
+      ? "All Groq attempts failed; local policy used live tip floor."
+      : `Wallet balance (${(input.balanceLamports / 1e9).toFixed(6)} SOL) is near rent-exempt floor (${SOLANA_RENT_EXEMPT_RESERVE} lamports). Top-up required.`,
+    observed_risk: spendableLamports >= input.baseTipLamports ? (lastError || "Groq model chain unavailable") : "Insufficient spendable lamports for rent exemption",
   });
 }
 
@@ -923,9 +937,35 @@ export async function submitBundle(
   if (decision.action === "hold") {
     await onLog?.({
       level: "warn",
-      message: `AI agent held submission: ${decision.reason}`,
+      message: `AI safety gate triggered HOLD: ${decision.reason}`,
+      data: {
+        stage: "ai",
+        reason: decision.reason,
+        observedRisk: decision.observed_risk,
+      },
     });
-    throw new Error(`AI agent held submission: ${decision.reason}`);
+    const runNumber = Math.max(0, ...runs.map((run) => run.run_number)) + 1;
+    const heldRun = await appendRun({
+      bundle_id: "",
+      signature: "",
+      tip_lamports: 0,
+      tip_account: tipAccounts[0] ?? "",
+      status: "Failed",
+      submitted_at: new Date().toISOString(),
+      landed_at: null,
+      error_reason: `AI Hold: ${decision.reason}`,
+      run_number: runNumber,
+      profile,
+      ai_decision_id: decision.id,
+      failure_type: "insufficient_funds_for_rent",
+      failure_stage: "AI Safety Gate",
+      recovery: "Top up wallet with ≥ 0.001 SOL to restore spendable rent buffer",
+    });
+    await onLog?.({
+      level: "info",
+      message: `Logged held run #${runNumber} to lifecycle_log.jsonl (Wallet protected)`,
+    });
+    return heldRun;
   }
 
   const runNumber = Math.max(0, ...runs.map((run) => run.run_number)) + 1;
