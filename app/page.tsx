@@ -48,7 +48,7 @@ const parseInline = (text: string) => {
   html = html.replace(/_(.*?)_/g, '<em class="italic">$1</em>');
   html = html.replace(
     /`(.*?)`/g,
-    '<code class="bg-[#121212]/5 px-1.5 py-0.5 rounded font-mono text-[11px] text-[#FF5A26] font-bold break-all inline-block max-w-full">$1</code>'
+    '<code class="bg-[#121212]/5 px-1.5 py-0.5 rounded font-mono text-xs text-[#FF5A26] font-bold break-all inline-block max-w-full">$1</code>'
   );
 
   return <span dangerouslySetInnerHTML={{ __html: html }} />;
@@ -74,7 +74,7 @@ const renderMarkdown = (text: string) => {
       elements.push(
         <pre
           key={`code-block-${key}`}
-          className="mb-4 max-w-full overflow-x-auto border-2 border-[#121212] bg-[#121212] text-[#F7F4EC] p-3 font-mono text-[11px]"
+          className="mb-4 max-w-full overflow-x-auto border-2 border-[#121212] bg-[#121212] text-[#F7F4EC] p-3 font-mono text-xs"
         >
           <code className="block break-all whitespace-pre-wrap">
             {codeContent}
@@ -577,7 +577,7 @@ function AutonomousSection() {
       {/* SECTION HEADER */}
       <section id="autonomous" className="mx-auto max-w-7xl px-4 pt-8 pb-2 sm:px-6">
         <div className="border-b-2 border-[#121212] pb-6">
-          <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+          <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
             Autonomous Pipeline
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
@@ -595,12 +595,12 @@ function AutonomousSection() {
       <section id="autonomous-health" className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#5A564F]">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F]">
               System Health
             </span>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">CB:</span>
-              <span className={`font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+              <span className="font-mono text-xs font-bold uppercase text-[#5A564F]">CB:</span>
+              <span className={`font-mono text-xs font-bold uppercase px-2 py-0.5 rounded-full border ${
                 health?.circuitBreakerState === "closed"
                   ? "border-emerald-400 bg-emerald-50 text-emerald-800"
                   : "border-red-400 bg-red-50 text-red-800"
@@ -622,7 +622,7 @@ function AutonomousSection() {
                 key={`health-${item.label}`}
                 className="border-2 border-[#121212] bg-[#F7F4EC] p-3 rounded-xl flex items-center justify-between"
               >
-                <span className="font-mono text-[11px] font-bold text-[#121212]">{item.label}</span>
+                <span className="font-mono text-xs font-bold text-[#121212]">{item.label}</span>
                 <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${item.ok ? "bg-emerald-500" : "bg-red-500"}`} />
               </div>
             ))}
@@ -639,7 +639,7 @@ function AutonomousSection() {
                 { label: "Leader Dist", value: network.slotsToLeader != null ? `${network.slotsToLeader} slots` : "--" },
               ].map((item) => (
                 <div key={`net-${item.label}`}>
-                  <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">{item.label}</p>
+                  <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">{item.label}</p>
                   <p className="font-serif text-sm font-bold text-[#121212]">{item.value}</p>
                 </div>
               ))}
@@ -653,10 +653,10 @@ function AutonomousSection() {
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
-              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Execution Mode
               </span>
-              <p className="font-sans text-xs text-[#5A564F] mt-0.5">
+              <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">
                 Controls whether Sentry executes transactions or only observes.
               </p>
             </div>
@@ -704,7 +704,7 @@ function AutonomousSection() {
           <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5 flex flex-col">
             <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-[#121212]/10">
               <div>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                   Solami Blur + Yellowstone
                 </span>
                 <h3 className="font-serif text-lg font-bold text-[#121212]">
@@ -713,7 +713,7 @@ function AutonomousSection() {
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-mono text-[10px] text-[#5A564F]">streaming</span>
+                <span className="font-mono text-xs text-[#5A564F]">streaming</span>
               </div>
             </div>
 
@@ -729,7 +729,7 @@ function AutonomousSection() {
                     className="border-2 border-[#121212]/10 bg-[#F7F4EC] rounded-xl p-3"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                      <span className={`font-mono text-xs font-bold uppercase px-1.5 py-0.5 rounded border ${
                         evt.source === "blur"
                           ? "border-blue-300 bg-blue-50 text-blue-800"
                           : evt.source === "synthetic"
@@ -738,14 +738,14 @@ function AutonomousSection() {
                       }`}>
                         {evt.source}
                       </span>
-                      <span className="font-mono text-[10px] text-[#5A564F]">
+                      <span className="font-mono text-xs text-[#5A564F]">
                         slot {evt.slot?.toLocaleString() ?? "--"}
                       </span>
                     </div>
                     <p className="font-serif text-xs font-bold text-[#121212] capitalize">
                       {evt.type.replace(/_/g, " ")}
                     </p>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">
                       {evt.decoded?.description ?? "--"}
                     </p>
                     {evt.opportunityScore !== undefined && (
@@ -756,7 +756,7 @@ function AutonomousSection() {
                             style={{ width: `${evt.opportunityScore}%` }}
                           />
                         </div>
-                        <span className="font-mono text-[10px] font-bold text-[#FF5A26]">
+                        <span className="font-mono text-xs font-bold text-[#FF5A26]">
                           {evt.opportunityScore}
                         </span>
                       </div>
@@ -771,14 +771,14 @@ function AutonomousSection() {
           <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-5 flex flex-col">
             <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-[#121212]/10">
               <div>
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                   Decision Provenance
                 </span>
                 <h3 className="font-serif text-lg font-bold text-[#121212]">
                   Execution Receipts
                 </h3>
               </div>
-              <span className="font-mono text-[10px] text-[#5A564F]">
+              <span className="font-mono text-xs text-[#5A564F]">
                 {receipts.length} recorded
               </span>
             </div>
@@ -800,7 +800,7 @@ function AutonomousSection() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full border ${
+                      <span className={`font-mono text-xs font-bold uppercase px-1.5 py-0.5 rounded-full border ${
                         r.finalStatus === "finalized" || r.finalStatus === "confirmed"
                           ? "border-emerald-400 bg-emerald-50 text-emerald-800"
                           : r.finalStatus === "failed" || r.finalStatus === "blocked"
@@ -811,7 +811,7 @@ function AutonomousSection() {
                       }`}>
                         {r.finalStatus}
                       </span>
-                      <span className="font-mono text-[10px] text-[#5A564F]">
+                      <span className="font-mono text-xs text-[#5A564F]">
                         {r.durationMs ? `${(r.durationMs / 1000).toFixed(1)}s` : "--"}
                       </span>
                     </div>
@@ -819,13 +819,13 @@ function AutonomousSection() {
                       {r.trigger?.type?.replace(/_/g, " ") ?? "unknown event"}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="font-mono text-[10px] text-[#5A564F]">
+                      <span className="font-mono text-xs text-[#5A564F]">
                         {r.policyEvaluation?.recommendedRoute?.toUpperCase() ?? "--"}
                       </span>
                       {r.totalTipLamports != null && (
                         <>
                           <span className="text-[#5A564F]/40">|</span>
-                          <span className="font-mono text-[10px] text-[#5A564F]">
+                          <span className="font-mono text-xs text-[#5A564F]">
                             {r.totalTipLamports.toLocaleString()} lam
                           </span>
                         </>
@@ -845,7 +845,7 @@ function AutonomousSection() {
           <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div>
-                <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                   Execution Receipt
                 </span>
                 <h3 className="font-serif text-xl font-bold text-[#121212]">
@@ -858,7 +858,7 @@ function AutonomousSection() {
                     href={selectedReceipt.explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 rounded-lg font-mono text-[11px] font-bold hover:bg-[#FF5A26] hover:text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 rounded-lg font-mono text-xs font-bold hover:bg-[#FF5A26] hover:text-white transition-colors"
                   >
                     <ArrowSquareOut size={13} weight="bold" />
                     Solscan
@@ -878,23 +878,23 @@ function AutonomousSection() {
 
               {/* 1. Trigger */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                <p className="font-mono text-xs font-bold uppercase text-[#FF5A26] mb-2">
                   1. Trigger
                 </p>
                 <p className="font-serif text-sm font-bold text-[#121212] capitalize">
                   {selectedReceipt.trigger?.type?.replace(/_/g, " ") ?? "--"}
                 </p>
-                <p className="font-sans text-[11px] text-[#5A564F] mt-1">
+                <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                   Source: {selectedReceipt.trigger?.source ?? "--"}
                 </p>
                 {selectedReceipt.trigger?.decoded?.description && (
-                  <p className="font-sans text-[11px] text-[#121212] mt-1 leading-relaxed">
+                  <p className="font-sans text-xs text-[#121212] mt-1 leading-relaxed">
                     {selectedReceipt.trigger.decoded.description}
                   </p>
                 )}
                 {selectedReceipt.trigger?.opportunityScore != null && (
                   <div className="mt-2">
-                    <p className="font-mono text-[10px] text-[#5A564F]">Opportunity Score</p>
+                    <p className="font-mono text-xs text-[#5A564F]">Opportunity Score</p>
                     <div className="mt-1 flex items-center gap-1.5">
                       <div className="flex-1 h-1.5 bg-[#121212]/10 rounded-full overflow-hidden">
                         <div
@@ -902,7 +902,7 @@ function AutonomousSection() {
                           style={{ width: `${selectedReceipt.trigger.opportunityScore}%` }}
                         />
                       </div>
-                      <span className="font-mono text-[11px] font-bold text-[#FF5A26]">
+                      <span className="font-mono text-xs font-bold text-[#FF5A26]">
                         {selectedReceipt.trigger.opportunityScore}
                       </span>
                     </div>
@@ -912,7 +912,7 @@ function AutonomousSection() {
 
               {/* 2. Network State */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                <p className="font-mono text-xs font-bold uppercase text-[#FF5A26] mb-2">
                   2. Network State
                 </p>
                 {selectedReceipt.networkSnapshot ? (
@@ -924,25 +924,25 @@ function AutonomousSection() {
                       { k: "Congestion", v: `${selectedReceipt.networkSnapshot.congestionScore ?? "--"}/100` },
                       { k: "Leader dist", v: selectedReceipt.networkSnapshot.slotsToLeader != null ? `${selectedReceipt.networkSnapshot.slotsToLeader} slots` : "--" },
                     ].map((row) => (
-                      <div key={`ns-${row.k}`} className="flex items-center justify-between text-[11px]">
+                      <div key={`ns-${row.k}`} className="flex items-center justify-between text-xs">
                         <span className="font-sans text-[#5A564F]">{row.k}</span>
                         <span className="font-mono font-bold text-[#121212]">{row.v}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="font-sans text-[11px] text-[#5A564F]">Not captured</p>
+                  <p className="font-sans text-xs text-[#5A564F]">Not captured</p>
                 )}
               </div>
 
               {/* 3. Policy Decision */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                <p className="font-mono text-xs font-bold uppercase text-[#FF5A26] mb-2">
                   3. Policy Decision
                 </p>
                 {selectedReceipt.policyEvaluation ? (
                   <>
-                    <span className={`inline-block font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border mb-2 ${
+                    <span className={`inline-block font-mono text-xs font-bold uppercase px-2 py-0.5 rounded-full border mb-2 ${
                       selectedReceipt.policyEvaluation.decision === "allowed"
                         ? "border-emerald-400 bg-emerald-50 text-emerald-800"
                         : selectedReceipt.policyEvaluation.decision === "shadow"
@@ -953,43 +953,43 @@ function AutonomousSection() {
                     </span>
                     <div className="space-y-1">
                       {selectedReceipt.policyEvaluation.passedChecks.slice(0, 4).map((c, i) => (
-                        <p key={`pc-${i}`} className="font-sans text-[10px] text-emerald-700">
+                        <p key={`pc-${i}`} className="font-sans text-xs text-emerald-700">
                           {c}
                         </p>
                       ))}
                       {selectedReceipt.policyEvaluation.failedChecks.slice(0, 3).map((c, i) => (
-                        <p key={`fc-${i}`} className="font-sans text-[10px] text-red-700">
+                        <p key={`fc-${i}`} className="font-sans text-xs text-red-700">
                           {c}
                         </p>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <p className="font-sans text-[11px] text-[#5A564F]">Not evaluated</p>
+                  <p className="font-sans text-xs text-[#5A564F]">Not evaluated</p>
                 )}
               </div>
 
               {/* 4. AI Operator */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26] mb-2">
+                <p className="font-mono text-xs font-bold uppercase text-[#FF5A26] mb-2">
                   4. AI Operator
                 </p>
                 {selectedReceipt.aiRecommendation ? (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[10px] font-bold text-[#121212] uppercase">
+                      <span className="font-mono text-xs font-bold text-[#121212] uppercase">
                         {selectedReceipt.aiRecommendation.action}
                       </span>
-                      <span className="font-mono text-[10px] text-[#5A564F]">
+                      <span className="font-mono text-xs text-[#5A564F]">
                         {Math.round(selectedReceipt.aiRecommendation.confidence * 100)}% conf.
                       </span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#121212] leading-relaxed italic">
+                    <p className="font-sans text-xs text-[#121212] leading-relaxed italic">
                       &quot;{selectedReceipt.aiRecommendation.reason?.slice(0, 120)}&quot;
                     </p>
                   </div>
                 ) : (
-                  <p className="font-sans text-[11px] text-[#5A564F]">
+                  <p className="font-sans text-xs text-[#5A564F]">
                     AI consulted but no recommendation recorded, or blocked at policy.
                   </p>
                 )}
@@ -1001,7 +1001,7 @@ function AutonomousSection() {
 
               {/* Lifecycle stages */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F] mb-3">
+                <p className="font-mono text-xs font-bold uppercase text-[#5A564F] mb-3">
                   Lifecycle
                 </p>
                 <div className="flex flex-col gap-2">
@@ -1027,7 +1027,7 @@ function AutonomousSection() {
                         </div>
                         <span className="font-mono text-xs font-bold uppercase text-[#121212]">{st}</span>
                         {found && (
-                          <span className="font-mono text-[10px] text-[#5A564F] ml-auto">
+                          <span className="font-mono text-xs text-[#5A564F] ml-auto">
                             {new Date(found.timestamp).toLocaleTimeString()}
                           </span>
                         )}
@@ -1039,7 +1039,7 @@ function AutonomousSection() {
 
               {/* Action result + failure analysis */}
               <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
-                <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F] mb-3">
+                <p className="font-mono text-xs font-bold uppercase text-[#5A564F] mb-3">
                   Execution Result
                 </p>
                 {selectedReceipt.actionResult ? (
@@ -1050,15 +1050,15 @@ function AutonomousSection() {
                       { k: "Cost", v: selectedReceipt.costSol != null ? `${selectedReceipt.costSol.toFixed(6)} SOL` : "--" },
                       { k: "Duration", v: selectedReceipt.durationMs != null ? `${(selectedReceipt.durationMs / 1000).toFixed(2)}s` : "--" },
                     ].map((row) => (
-                      <div key={`ar-${row.k}`} className="flex items-center justify-between text-[11px]">
+                      <div key={`ar-${row.k}`} className="flex items-center justify-between text-xs">
                         <span className="font-sans text-[#5A564F]">{row.k}</span>
                         <span className="font-mono font-bold text-[#121212]">{row.v}</span>
                       </div>
                     ))}
                     {selectedReceipt.signature && (
                       <div className="mt-2 pt-2 border-t border-[#121212]/10">
-                        <p className="font-mono text-[10px] text-[#5A564F]">Signature</p>
-                        <p className="font-mono text-[10px] font-bold text-[#121212] break-all mt-0.5">
+                        <p className="font-mono text-xs text-[#5A564F]">Signature</p>
+                        <p className="font-mono text-xs font-bold text-[#121212] break-all mt-0.5">
                           {selectedReceipt.signature.slice(0, 32)}...
                         </p>
                       </div>
@@ -1066,21 +1066,21 @@ function AutonomousSection() {
                   </div>
                 ) : selectedReceipt.failureAnalysis ? (
                   <div className="space-y-2">
-                    <span className="inline-block font-mono text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-red-400 bg-red-50 text-red-800">
+                    <span className="inline-block font-mono text-xs font-bold uppercase px-2 py-0.5 rounded-full border border-red-400 bg-red-50 text-red-800">
                       {selectedReceipt.failureAnalysis.class?.replace(/_/g, " ")}
                     </span>
-                    <p className="font-sans text-[11px] text-[#121212]">
+                    <p className="font-sans text-xs text-[#121212]">
                       {selectedReceipt.failureAnalysis.description}
                     </p>
-                    <p className="font-mono text-[10px] text-[#5A564F]">
+                    <p className="font-mono text-xs text-[#5A564F]">
                       Recovery: {selectedReceipt.failureAnalysis.recovery?.replace(/_/g, " ")}
                     </p>
-                    <p className="font-mono text-[10px] text-[#5A564F]">
+                    <p className="font-mono text-xs text-[#5A564F]">
                       Retryable: {selectedReceipt.failureAnalysis.retryable ? "Yes" : "No (aborted)"}
                     </p>
                   </div>
                 ) : (
-                  <p className="font-sans text-[11px] text-[#5A564F]">
+                  <p className="font-sans text-xs text-[#5A564F]">
                     {selectedReceipt.finalStatus === "blocked"
                       ? `Blocked by policy: ${selectedReceipt.policyEvaluation?.blockReason?.replace(/_/g, " ") ?? "--"}`
                       : selectedReceipt.finalStatus === "shadow"
@@ -1098,13 +1098,13 @@ function AutonomousSection() {
       <section id="autonomous-lab" className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6">
           <div className="mb-5">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
               Sentry Lab
             </span>
             <h3 className="font-serif text-xl font-bold text-[#121212]">
               Fault Injection
             </h3>
-            <p className="font-sans text-xs text-[#5A564F] mt-1">
+            <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
               Inject classified failure conditions. Sentry detects, classifies, and recovers. Each run generates a full execution receipt.
             </p>
           </div>
@@ -1210,37 +1210,37 @@ function ExplainerSections({
           {/* Right Column (Visual 3 Problem Stats) */}
           <div className="space-y-4">
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
-              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <span className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Public RPC Drop Rate
               </span>
               <p className="font-serif text-4xl sm:text-5xl font-black text-[#FF5A26] mt-2 leading-none">
                 Up to 40%
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 Packets discarded by saturated validator TPU ingress buffers before block insertion.
               </p>
             </div>
 
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
-              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <span className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Static Priority Bids
               </span>
               <p className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-2 leading-none">
                 Pure Guesswork
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 Applications overpay static fees or get outbid in microsecond congestion spikes without live percentile feedback.
               </p>
             </div>
 
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
-              <span className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <span className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Packet Visibility
               </span>
               <p className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-2 leading-none">
                 Zero Traces
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 No causal feedback explaining whether transactions expired, failed simulation, or missed slot deadlines.
               </p>
             </div>
@@ -1262,7 +1262,7 @@ function ExplainerSections({
               <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
                 Yellowstone & Blur Ingestion
               </h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Sub-slot gRPC Geyser telemetry and pre-block decoded DEX swaps capture liquidity dynamics before blocks seal.
               </p>
             </div>
@@ -1274,7 +1274,7 @@ function ExplainerSections({
               <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
                 Deterministic Policy & Groq AI
               </h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Microsecond invariant checks (max tip, slippage, circuit breaker) filter risk before Groq LPU models compute optimal tip escalation.
               </p>
             </div>
@@ -1286,7 +1286,7 @@ function ExplainerSections({
               <h4 className="font-serif text-lg font-bold text-[#121212] mt-2">
                 Solami Beam SWQoS Routing
               </h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Direct stake-weighted priority routing to the scheduled validator leader with dynamic Jito bundle tips. Zero dropped packets.
               </p>
             </div>
@@ -1384,13 +1384,13 @@ function ExplainerSections({
           <div className="grid sm:grid-cols-2 gap-3.5">
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
               <div>
-                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-[#FF5A26]/10 text-[#FF5A26] rounded">
+                <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-[#FF5A26]/10 text-[#FF5A26] rounded">
                   EXECUTION
                 </span>
                 <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
                   Mission Run Profiles
                 </h4>
-                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                   Trigger real mainnet bundles with dynamic tip floors, slippage stress, or congestion burst settings.
                 </p>
               </div>
@@ -1404,13 +1404,13 @@ function ExplainerSections({
 
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
               <div>
-                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
                   RUNTIME
                 </span>
                 <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
                   Autonomous Modes
                 </h4>
-                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                   Toggle between Observe (audit only), Shadow (pipeline simulation), and Live (real reactive execution).
                 </p>
               </div>
@@ -1424,13 +1424,13 @@ function ExplainerSections({
 
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
               <div>
-                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded">
+                <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded">
                   TELEMETRY
                 </span>
                 <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
                   Live Blur DEX Stream
                 </h4>
-                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                   Stream pre-block token swaps with real-time opportunity scoring (0–100) and automated policy gating.
                 </p>
               </div>
@@ -1444,13 +1444,13 @@ function ExplainerSections({
 
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-5 rounded-2xl flex flex-col justify-between">
               <div>
-                <span className="font-mono text-[9px] font-bold uppercase px-2 py-0.5 bg-amber-50 text-amber-800 rounded">
+                <span className="font-mono text-xs font-bold uppercase px-2 py-0.5 bg-amber-50 text-amber-800 rounded">
                   RESILIENCE
                 </span>
                 <h4 className="font-serif text-base font-bold text-[#121212] mt-2">
                   Fault Injection Lab
                 </h4>
-                <p className="font-sans text-xs text-[#5A564F] mt-1.5 leading-relaxed">
+                <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                   Stress-test expired blockhashes, zero tips, or rate limit spikes and watch Sentry classify & recover.
                 </p>
               </div>
@@ -1486,10 +1486,10 @@ function ExplainerSections({
                   </span>
                   <div>
                     <p className="font-serif text-sm font-bold text-[#121212]">{node.name}</p>
-                    <p className="font-sans text-[11px] text-[#5A564F]">{node.detail}</p>
+                    <p className="font-sans text-xs text-[#5A564F]">{node.detail}</p>
                   </div>
                 </div>
-                <span className="font-mono text-[9px] uppercase px-2 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">
+                <span className="font-mono text-xs uppercase px-2 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">
                   {node.tag}
                 </span>
               </div>
@@ -1567,7 +1567,7 @@ function ExplainerSections({
                 01
               </div>
               <h4 className="font-serif text-lg font-bold text-[#121212]">Choose Operating Mode</h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 Keep the Autonomous Engine in Observe mode to audit without spending SOL, or toggle to Live mode for real reactive transactions.
               </p>
             </div>
@@ -1577,7 +1577,7 @@ function ExplainerSections({
                 02
               </div>
               <h4 className="font-serif text-lg font-bold text-[#121212]">Run Profile or Inject Fault</h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 Execute a curated transaction profile from the Mission Setup panel, or trigger a classified fault in the Sentry Lab to verify recovery.
               </p>
             </div>
@@ -1587,7 +1587,7 @@ function ExplainerSections({
                 03
               </div>
               <h4 className="font-serif text-lg font-bold text-[#121212]">Inspect Terminal & Receipts</h4>
-              <p className="font-sans text-xs text-[#5A564F] mt-2 leading-relaxed">
+              <p className="font-sans text-sm text-[#5A564F] mt-2 leading-relaxed">
                 Watch live multi-stage streaming in the Execution Terminal and click into the Execution Receipts panel for full causal traces.
               </p>
             </div>
@@ -1982,7 +1982,7 @@ export default function Home() {
               <span className="font-serif font-black text-sm tracking-tight leading-tight">
                 Sentry Stack Co.
               </span>
-              <span className="font-mono text-[10px] text-[#5A564F]">
+              <span className="font-mono text-xs text-[#5A564F]">
                 /sentry@solami.io
               </span>
             </div>
@@ -2023,9 +2023,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">System Health</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">CIRCUIT_BREAKER</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">CIRCUIT_BREAKER</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Live status of Yellowstone, Blur, Beam & RPC</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Live status of Yellowstone, Blur, Beam & RPC</p>
                   </button>
                   <button
                     onClick={() => navigateTo("autonomous", "#autonomous-mode")}
@@ -2033,9 +2033,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Mode</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">OBSERVE / SHADOW / LIVE</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">OBSERVE / SHADOW / LIVE</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Switch autonomous reactive execution modes</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Switch autonomous reactive execution modes</p>
                   </button>
                   <button
                     onClick={() => navigateTo("autonomous", "#autonomous-events")}
@@ -2043,9 +2043,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Live Event Feed</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800">STREAMING</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800">STREAMING</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Decoded Blur DEX swaps & Yellowstone telemetry</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Decoded Blur DEX swaps & Yellowstone telemetry</p>
                   </button>
                   <button
                     onClick={() => navigateTo("autonomous", "#autonomous-receipts")}
@@ -2053,9 +2053,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Receipts</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">PROVENANCE</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">PROVENANCE</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Inspect full causal decision traces & receipts</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Inspect full causal decision traces & receipts</p>
                   </button>
                   <button
                     onClick={() => navigateTo("autonomous", "#autonomous-lab")}
@@ -2063,9 +2063,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Fault Injection Lab</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-800">TEST_LAB</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-800">TEST_LAB</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Inject expired blockhash, low tip & observe recovery</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Inject expired blockhash, low tip & observe recovery</p>
                   </button>
                 </div>
               </div>
@@ -2094,9 +2094,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Run Profiles</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">5_PROFILES</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">5_PROFILES</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Select and execute configured mainnet bundles</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Select and execute configured mainnet bundles</p>
                   </button>
                   <button
                     onClick={() => navigateTo("console", "#terminal")}
@@ -2104,9 +2104,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Execution Terminal</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">LIVE_SSE</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#FF5A26]/10 text-[#FF5A26]">LIVE_SSE</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Multi-stage streaming terminal & slot telemetry</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Multi-stage streaming terminal & slot telemetry</p>
                   </button>
                   <button
                     onClick={() => navigateTo("console", "#lifecycle")}
@@ -2114,9 +2114,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Lifecycle Stages</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">FINALITY</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">FINALITY</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Processed → Confirmed → Finalized slot timings</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Processed → Confirmed → Finalized slot timings</p>
                   </button>
                 </div>
               </div>
@@ -2145,9 +2145,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">AI Decision Trail</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">GROQ_LPU</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">GROQ_LPU</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Groq LPU reasoning traces, confidence & risk</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Groq LPU reasoning traces, confidence & risk</p>
                   </button>
                   <button
                     onClick={() => navigateTo("intelligence", "#evidence")}
@@ -2155,9 +2155,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Verifiable Evidence</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">JSONL_LOGS</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">JSONL_LOGS</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Immutable onchain receipts and audit ledger</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Immutable onchain receipts and audit ledger</p>
                   </button>
                   <button
                     onClick={() => navigateTo("intelligence", "#stack")}
@@ -2165,9 +2165,9 @@ export default function Home() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xs font-bold text-[#121212]">Architecture Stack</span>
-                      <span className="font-mono text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">SYSTEM_DESIGN</span>
+                      <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">SYSTEM_DESIGN</span>
                     </div>
-                    <p className="font-sans text-[11px] text-[#5A564F] mt-0.5">Deep architectural breakdown of components</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Deep architectural breakdown of components</p>
                   </button>
                 </div>
               </div>
@@ -2187,7 +2187,7 @@ export default function Home() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-[11px] font-semibold rounded-full">
+            <div className="hidden sm:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-xs font-semibold rounded-full">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>Mainnet</span>
               <span className="text-[#121212]/30 select-none">•</span>
@@ -2230,7 +2230,7 @@ export default function Home() {
             </div>
 
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Autonomous Engine</p>
+              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Autonomous Engine</p>
               <div className="mt-1 space-y-1">
                 <button
                   onClick={() => navigateTo("autonomous", "#autonomous-health")}
@@ -2266,7 +2266,7 @@ export default function Home() {
             </div>
 
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Mission Console</p>
+              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Mission Console</p>
               <div className="mt-1 space-y-1">
                 <button
                   onClick={() => navigateTo("console", "#mission-profiles")}
@@ -2290,7 +2290,7 @@ export default function Home() {
             </div>
 
             <div>
-              <p className="font-mono text-[10px] font-bold uppercase text-[#FF5A26]">Intelligence & Proof</p>
+              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Intelligence & Proof</p>
               <div className="mt-1 space-y-1">
                 <button
                   onClick={() => navigateTo("intelligence", "#agent")}
@@ -2343,10 +2343,10 @@ export default function Home() {
             <div>
               {/* Kicker tag */}
               <div className="flex items-center gap-2 mb-6">
-                <span className="font-mono text-xs font-bold text-[#FF5A26] tracking-wider uppercase">
+                <span className="font-mono text-sm font-bold text-[#FF5A26] tracking-wider uppercase">
                   _/ Autonomous Solana Infrastructure
                 </span>
-                <span className="inline-flex items-center gap-1 border-2 border-[#121212] bg-[#FFFFFF] px-2 py-0.5 font-mono text-[10px] font-bold rounded-md">
+                <span className="inline-flex items-center gap-1 border-2 border-[#121212] bg-[#FFFFFF] px-2 py-0.5 font-mono text-xs font-bold rounded-md">
                   <ShieldCheck size={13} weight="bold" /> Solami Beam
                 </span>
               </div>
@@ -2533,15 +2533,15 @@ export default function Home() {
             {/* Bottom Live Slot Pulse embedded in orange card */}
             <div className="relative z-10 border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl flex items-center justify-between">
               <div>
-                <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#5A564F]">
+                <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F]">
                   Observed Mainnet Slot
                 </p>
-                <p className="font-serif text-2xl font-bold tracking-tight text-[#121212]">
+                <p className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#121212]">
                   {formatNumber(snapshot?.slot)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#5A564F]">
+                <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F]">
                   Dynamic Tip Floor
                 </p>
                 <p className="font-mono text-sm font-bold text-[#FF5A26]">
@@ -2568,7 +2568,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="font-serif text-sm font-bold text-[#121212]">Sentry 2.0 Stack Co.</p>
-                  <p className="font-mono text-[10px] text-[#5A564F]">Autonomous Solana Transaction Infrastructure</p>
+                  <p className="font-mono text-xs text-[#5A564F]">Autonomous Solana Transaction Infrastructure</p>
                 </div>
               </div>
 
@@ -2674,13 +2674,13 @@ export default function Home() {
               key={`metric-${metric.label}`}
               className="border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl"
             >
-              <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#5A564F]">
+              <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F]">
                 {metric.label}
               </p>
               <p className="mt-2 font-serif text-2xl font-bold text-[#121212] truncate">
                 {metric.value}
               </p>
-              <p className="mt-1 font-sans text-[11px] text-[#5A564F]">
+              <p className="mt-1 font-sans text-xs text-[#5A564F]">
                 {metric.hint}
               </p>
             </div>
@@ -2693,7 +2693,7 @@ export default function Home() {
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Mission Setup
               </span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#121212]">
@@ -2775,7 +2775,7 @@ export default function Home() {
                 <span className="font-mono text-xs font-bold text-[#F7F4EC]">
                   Execution Stream Terminal
                 </span>
-                <span className="font-mono text-[10px] uppercase px-2 py-0.5 bg-[#FF5A26] text-white rounded">
+                <span className="font-mono text-xs uppercase px-2 py-0.5 bg-[#FF5A26] text-white rounded">
                   {activeStage}
                 </span>
               </div>
@@ -2787,7 +2787,7 @@ export default function Home() {
                   return (
                     <div
                       key={`term-stage-${stg.id}`}
-                      className={`text-center py-1 px-1 rounded border text-[10px] font-mono ${
+                      className={`text-center py-1 px-1 rounded border text-xs font-mono ${
                         isActive
                           ? "border-[#FF5A26] bg-[#FF5A26] text-white font-bold"
                           : "border-[#F7F4EC]/20 text-[#F7F4EC]/60"
@@ -2808,11 +2808,11 @@ export default function Home() {
                 ) : (
                   terminalLines.map((line, idx) => (
                     <div key={`term-line-${idx}-${line.timestamp}`} className="flex items-start gap-2 py-0.5">
-                      <span className="text-[#F7F4EC]/40 shrink-0 text-[10px]">
+                      <span className="text-[#F7F4EC]/40 shrink-0 text-xs">
                         {line.timestamp ? line.timestamp.slice(11, 19) : "--:--:--"}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-1 rounded shrink-0 ${
+                        className={`text-xs font-bold px-1 rounded shrink-0 ${
                           line.level === "error"
                             ? "bg-red-900/60 text-red-300"
                             : line.level === "warn"
@@ -2839,7 +2839,7 @@ export default function Home() {
             <div>
               <div className="flex items-center justify-between pb-3 mb-3 border-b-2 border-[#121212]/10">
                 <div>
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                     gRPC Subscription
                   </span>
                   <h3 className="font-serif text-lg font-bold text-[#121212]">
@@ -2854,11 +2854,11 @@ export default function Home() {
                   <p className="text-[#5A564F] italic">Listening for Yellowstone slot events...</p>
                 ) : (
                   slotLines.map((s, idx) => (
-                    <div key={`slot-item-${idx}-${s.timestamp || s.slot}`} className="flex items-center justify-between text-[11px] py-0.5 border-b border-[#121212]/5">
+                    <div key={`slot-item-${idx}-${s.timestamp || s.slot}`} className="flex items-center justify-between text-xs py-0.5 border-b border-[#121212]/5">
                       <span className="font-bold text-[#121212]">
                         {s.slot ? `Slot #${formatNumber(s.slot)}` : s.message}
                       </span>
-                      <span className="text-[#5A564F] text-[10px]">
+                      <span className="text-[#5A564F] text-xs">
                         {s.timestamp ? s.timestamp.slice(11, 19) : ""}
                       </span>
                     </div>
@@ -2875,7 +2875,7 @@ export default function Home() {
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <div>
-              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Historical Telemetry
               </span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#121212]">
@@ -2890,7 +2890,7 @@ export default function Home() {
           {/* Table Container */}
           <div className="overflow-x-auto border-2 border-[#121212] rounded-xl">
             <table className="w-full text-left font-sans text-xs">
-              <thead className="bg-[#F7F4EC] border-b-2 border-[#121212] font-mono text-[11px] uppercase tracking-wider text-[#121212]">
+              <thead className="bg-[#F7F4EC] border-b-2 border-[#121212] font-mono text-xs uppercase tracking-wider text-[#121212]">
                 <tr>
                   <th className="p-3">Run #</th>
                   <th className="p-3">Status</th>
@@ -2920,7 +2920,7 @@ export default function Home() {
                       </td>
                       <td className="p-3">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase ${
                             run.status === "Landed"
                               ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
                               : run.status === "Failed" || run.status === "Invalid"
@@ -2952,7 +2952,7 @@ export default function Home() {
                       <td className="p-3 font-mono">
                         {run.landed_slot ? formatNumber(run.landed_slot) : run.submit_slot ? `sub @ ${formatNumber(run.submit_slot)}` : "--"}
                       </td>
-                      <td className="p-3 font-mono text-[10px] text-[#5A564F]">
+                      <td className="p-3 font-mono text-xs text-[#5A564F]">
                         {run.confirmation_source === "yellowstone_stream"
                           ? "Yellowstone"
                           : run.confirmation_source === "rpc_polling_fallback"
@@ -2967,7 +2967,7 @@ export default function Home() {
                             setChatMessages([]);
                             analyzeRun(run);
                           }}
-                          className="inline-flex items-center gap-1.5 border border-[#121212] bg-[#FFFFFF] px-2.5 py-1 rounded text-[11px] font-serif font-bold hover:bg-[#FF5A26] hover:text-white transition-colors"
+                          className="inline-flex items-center gap-1.5 border border-[#121212] bg-[#FFFFFF] px-2.5 py-1 rounded text-xs font-serif font-bold hover:bg-[#FF5A26] hover:text-white transition-colors"
                         >
                           <Brain size={13} weight="bold" />
                           Ask AI
@@ -2985,7 +2985,7 @@ export default function Home() {
             <div className="mt-6 border-2 border-[#121212] bg-[#F7F4EC] rounded-xl p-5">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <div>
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26]">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                     Selected Run Inspector
                   </span>
                   <h3 className="font-serif text-xl font-bold text-[#121212]">
@@ -3017,7 +3017,7 @@ export default function Home() {
                       st.time ? "bg-white" : "bg-white/40 opacity-70"
                     }`}
                   >
-                    <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+                    <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                       {st.stage}
                     </p>
                     <p className="font-serif text-sm font-bold text-[#121212] mt-1">
@@ -3030,11 +3030,11 @@ export default function Home() {
               {/* Extra telemetry info */}
               <div className="grid gap-2 sm:grid-cols-2 font-mono text-xs">
                 <div className="border border-[#121212]/20 bg-white p-2.5 rounded">
-                  <span className="text-[#5A564F] text-[10px] block">Bundle ID:</span>
+                  <span className="text-[#5A564F] text-xs block">Bundle ID:</span>
                   <span className="font-bold break-all">{selectedRun.bundle_id || "--"}</span>
                 </div>
                 <div className="border border-[#121212]/20 bg-white p-2.5 rounded">
-                  <span className="text-[#5A564F] text-[10px] block">Error / Reason:</span>
+                  <span className="text-[#5A564F] text-xs block">Error / Reason:</span>
                   <span className="font-bold text-red-600">{selectedRun.error_reason || "None recorded"}</span>
                 </div>
               </div>
@@ -3054,7 +3054,7 @@ export default function Home() {
           <div className="flex items-center gap-3 mb-6">
             <Brain size={26} weight="bold" className="text-[#FF5A26]" />
             <div>
-              <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Agent Decision Trail
               </span>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#121212]">
@@ -3065,60 +3065,60 @@ export default function Home() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
-              <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Active AI Model
               </p>
               <p className="font-serif text-lg font-bold text-[#121212] mt-2">
                 {snapshot?.agentDecision?.model ?? "llama-3.3-70b-versatile"}
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-1">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Groq LPUs hardware accelerated inference.
               </p>
             </div>
 
             <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
-              <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Action & Confidence
               </p>
               <p className="font-serif text-lg font-bold text-[#121212] mt-2 capitalize">
                 {snapshot?.agentDecision?.action ?? "submit"} (
                 {Math.round((snapshot?.agentDecision?.confidence ?? 0.95) * 100)}%)
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-1">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Tip: {formatNumber(snapshot?.agentDecision?.recommended_tip_lamports ?? snapshot?.tipLamports)} lamports
               </p>
             </div>
 
             <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
-              <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Observed Risk
               </p>
               <p className="font-serif text-lg font-bold text-[#121212] mt-2 capitalize">
                 {snapshot?.agentDecision?.observed_risk ?? "Low / Normal"}
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-1">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Monitored against live block congestion.
               </p>
             </div>
 
             <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
-              <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F]">
+              <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Execution Policy
               </p>
               <p className="font-serif text-lg font-bold text-[#121212] mt-2">
                 Adaptive Retry
               </p>
-              <p className="font-sans text-xs text-[#5A564F] mt-1">
+              <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Automated fault detection and bump routing.
               </p>
             </div>
           </div>
 
           <div className="mt-5 border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl">
-            <p className="font-mono text-[10px] font-bold uppercase text-[#5A564F] mb-1">
+            <p className="font-mono text-xs font-bold uppercase text-[#5A564F] mb-1">
               Operator Reasoning
             </p>
-            <p className="font-serif text-sm italic text-[#121212] leading-relaxed">
+            <p className="font-serif text-base sm:text-lg italic text-[#121212] leading-relaxed">
               &quot;{snapshot?.agentDecision?.reason ?? "Beam tip floor evaluated dynamically. Inclusion probability verified above threshold."}&quot;
             </p>
           </div>
@@ -3136,7 +3136,7 @@ export default function Home() {
           </div>
 
           <div className="max-w-3xl my-2">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
               Verified Proof
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] tracking-tight">
@@ -3178,7 +3178,7 @@ export default function Home() {
       <section id="stack" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
           <div className="mb-6">
-            <span className="font-mono text-[11px] font-bold uppercase tracking-wider text-[#FF5A26]">
+            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
               System Design
             </span>
             <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#121212]">
@@ -3249,7 +3249,7 @@ export default function Home() {
                   return (
                     <div
                       key={`modal-stg-${stg.id}`}
-                      className={`text-center py-1.5 px-1 rounded border text-[10px] font-mono transition-colors ${
+                      className={`text-center py-1.5 px-1 rounded border text-xs font-mono transition-colors ${
                         isActive
                           ? "border-[#FF5A26] bg-[#FF5A26] text-white font-bold"
                           : "border-[#121212]/20 text-[#5A564F] bg-[#F7F4EC]"
@@ -3269,7 +3269,7 @@ export default function Home() {
                   <CheckCircle size={20} weight="fill" className="text-emerald-600 shrink-0" />
                   <div>
                     <strong className="block font-serif text-sm">Bundle Landed on Mainnet!</strong>
-                    <span className="font-mono text-[11px] break-all">{lastSubmittedSig}</span>
+                    <span className="font-mono text-xs break-all">{lastSubmittedSig}</span>
                   </div>
                 </div>
                 <a
@@ -3290,11 +3290,11 @@ export default function Home() {
             >
               {terminalLines.map((line, idx) => (
                 <div key={`modal-line-${idx}-${line.timestamp}`} className="flex items-start gap-2 py-0.5 leading-tight">
-                  <span className="text-[#F7F4EC]/40 shrink-0 text-[10px]">
+                  <span className="text-[#F7F4EC]/40 shrink-0 text-xs">
                     {line.timestamp ? line.timestamp.slice(11, 19) : "--:--:--"}
                   </span>
                   <span
-                    className={`text-[10px] font-bold px-1 rounded shrink-0 ${
+                    className={`text-xs font-bold px-1 rounded shrink-0 ${
                       line.level === "error"
                         ? "bg-red-900/60 text-red-300"
                         : line.level === "warn"
@@ -3312,7 +3312,7 @@ export default function Home() {
                 </div>
               ))}
               {submitting && (
-                <div className="text-[#FF5A26] font-mono text-[11px] pt-1">
+                <div className="text-[#FF5A26] font-mono text-xs pt-1">
                   &gt; Solami Beam routing transaction...
                 </div>
               )}
@@ -3373,7 +3373,7 @@ export default function Home() {
                         : "bg-[#FFFFFF] mr-8"
                     }`}
                   >
-                    <strong className="block mb-1 uppercase font-mono text-[10px] text-[#5A564F]">
+                    <strong className="block mb-1 uppercase font-mono text-xs text-[#5A564F]">
                       {msg.role === "user" ? "You" : "Groq AI Agent"}
                     </strong>
                     <div className="break-words">
