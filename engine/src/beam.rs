@@ -21,8 +21,6 @@ const TIP_ADDRESSES_URL: &str = "https://api.solami.dev/onchain/tip-addresses";
 const TIP_FLOOR_LAMPORTS: u64 = 30_000;
 
 // Hardcoded fallback tip accounts taken from the live API response.
-// These are the Beam-native accounts (suffixed *beam) plus Solami staking
-// accounts (*1ami). The last entry is a neutral catch-all.
 const FALLBACK_TIP_ACCOUNTS: &[&str] = &[
     "15qWd4huAkoxvhDsHMfpUn27TW1YBYMMJJ2jkAkbeam",
     "9XuGciSwr5wb7dLTQm91JhuBTvj3GG8WjuRDc3obeam",

@@ -211,3 +211,13 @@ export const CloudSlash = createIcon([
   { d: "M3 13H2a3 3 0 0 0 2.4 4.8" },
   { d: "M8 20h8" },
 ]);
+
+export const CaretDown = createIcon([{ d: "m6 9 6 6 6-6" }]);
+export const CaretUp = createIcon([{ d: "m18 15-6-6-6 6" }]);
+export const CaretLeft = createIcon([{ d: "m15 18-6-6 6-6" }]);
+export const CaretRight = createIcon([{ d: "m9 6 6 6-6 6" }]);
+export const List = createIcon([{ d: "M4 6h16M4 12h16M4 18h16" }]);
+export const Info = createIcon([
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
+  { d: "M12 8h.01M12 12v4" },
+]);
