@@ -240,6 +240,11 @@ export type ExecutionReceipt = {
   totalTipLamports?: number;
   signature?: string;
   explorerUrl?: string;
+  // Cryptographic Verifiable Evidence (SHA-256 Hash Chain & Ed25519 Engine Signature)
+  receiptHash: string;
+  prevReceiptHash: string;
+  engineSignature?: string;
+  signerPublicKey?: string;
 };
 
 export type AiRecommendation = {

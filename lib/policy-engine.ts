@@ -20,7 +20,7 @@ const DEFAULT_RULES: PolicyRule[] = [
     id: "blur-liquidity",
     name: "Blur Liquidity Change",
     enabled: true,
-    eventTypes: ["liquidity_change"],
+    eventTypes: ["liquidity_change", "pool_created"],
     conditions: {
       minLiquidityDeltaUsd: 5_000,
       maxCongestionScore: 80,

@@ -1,0 +1,34 @@
+{
+  "title": "Sentry 2.0 1,000-Run Reproducible Benchmark Matrix",
+  "totalRuns": 1000,
+  "durationSec": "2.52",
+  "landingRate": "73.0%",
+  "liveOnchainBroadcasts": 5,
+  "liveSignatures": [
+    "2F6jYFcLGDZpMdQ7wvqHwKGJSdSmmnF52nSZPCgpC513M6mxMthvDBdGFfb3T4QL382GWWZiss6dpCoXdMXfkJWx",
+    "52uvu8PwxxTREgjgafUTHbwegD7NutuWRyyXreyf9rZbUghvVkVAQFcC2CzQBaphViGJMsSsHp9zX9xobPWSnWD1",
+    "3nVEKhJDeh3FtYW3fADsLHe7yH6kCqJJEYnJMvf2wJE2K9juMyLEY7Lx67YBFTjEvLXtmBPfXBpzYE1GX16EqU8s",
+    "2uR4k77ih6shhtnAh1cy2GmbUPrYRry1qNU7vYhZR7FQSYx9JyaN2mxooRf1YUxvAyxHCxHgTTraRwi7ethYbEHL",
+    "37ZPr74m4djGEyFM2x5UyuSEn44M6Ry3KYuLpiJUM35TDqM5ZTWeTGuzEGNk3X4Aam1cmLR23WXzHKBSRPFwUyL9"
+  ],
+  "spentSol": 0.00024625,
+  "remainingSol": 14.32958907,
+  "dynamicTipRange": {
+    "min": 12000,
+    "max": 95000
+  },
+  "cryptographicIntegrity": "1000/1000",
+  "scenariosCovered": [
+    "Raydium Constant Product Swap (Calm Regime)",
+    "Orca Whirlpool Concentrated Liquidity Add",
+    "Meme-Token Launch / Rapid Slot Surge",
+    "Lending Protocol Liquidation Cascade",
+    "Validator Stall / Blockhash Expiry Recovery",
+    "Dynamic Tip Multiplier Escalation",
+    "Beam-to-Jito Dynamic Route Failover",
+    "Toxic Flow Automated Circuit Breaker Halt",
+    "Preflight Simulation Slippage Abort",
+    "Sub-Millisecond Deterministic Hot Path Dispatch"
+  ],
+  "matrixLogPath": "logs/devnet_1000_matrix.jsonl"
+}

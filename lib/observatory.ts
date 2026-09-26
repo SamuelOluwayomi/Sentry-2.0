@@ -397,20 +397,45 @@ export function summarizeRuns(runs: BundleRun[]) {
 }
 
 export async function getDynamicTip() {
-  // Solami does not expose a public tip-percentile endpoint.
-  // The 30,000-lamport floor is the empirically established mainnet landing minimum.
-  // The AI agent may override this via recommended_tip_lamports in its decision output.
-  const floor = 30_000;
-  const cap   = 100_000;
-  const tip   = Math.min(Math.max(floor, floor), cap);
+  // Live query to Jito Mainnet Tip Floor API with graceful fallback
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch("https://bundles.jito.wtf/api/v1/bundles/tip_floor", {
+      signal: controller.signal,
+      headers: { "User-Agent": "Sentry-Observatory/2.0" },
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      const entry = Array.isArray(data) ? data[0] : data;
+      if (entry && entry.landed_tips_75th_percentile !== undefined) {
+        const p25 = Math.round(Number(entry.landed_tips_25th_percentile ?? 0.00001) * 1e9);
+        const p50 = Math.round(Number(entry.landed_tips_50th_percentile ?? 0.00002) * 1e9);
+        const p75 = Math.round(Number(entry.landed_tips_75th_percentile ?? 0.00003) * 1e9);
+        const p95 = Math.round(Number(entry.landed_tips_95th_percentile ?? 0.00005) * 1e9);
+        // Minimum landing tip floor clamped between 10k and 150k
+        const dynamicTip = Math.min(Math.max(p75, 10_000), 150_000);
+        return {
+          tipLamports: dynamicTip,
+          sourceLamports: p75,
+          percentiles: { p25, p50, p75, p95 },
+        };
+      }
+    }
+  } catch {
+    // Non-fatal fallback to historical baseline
+  }
+
+  const floor = 25_000;
   return {
-    tipLamports: tip,
+    tipLamports: floor,
     sourceLamports: floor,
     percentiles: {
-      p25: 20_000,
-      p50: 25_000,
+      p25: 10_000,
+      p50: 18_000,
       p75: floor,
-      p95: 50_000,
+      p95: 65_000,
     },
   };
 }
@@ -551,7 +576,7 @@ function getGroqModels() {
 }
 
 function clampTip(value: number, floor: number) {
-  const minimum = Math.max(floor, 30_000);
+  const minimum = Math.max(floor, 10_000);
   return Math.min(Math.max(Math.round(value), minimum), 150_000);
 }
 

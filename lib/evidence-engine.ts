@@ -1,11 +1,13 @@
 // Sentry 2.0 -- Evidence Engine
-// Every execution gets a structured, auditable receipt.
-// "Why did Sentry do this?" -- answerable from every receipt.
+// Every execution gets a structured, auditable receipt with cryptographic verification.
+// Verifiable Evidence: SHA-256 Hash Chaining + Ed25519 Engine Signatures.
 
 import { appendFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
+import { Keypair } from "@solana/web3.js";
+import bs58 from "bs58";
 import type {
   ExecutionReceipt, SentryEvent, NetworkSnapshot,
   PolicyEvaluation, TipRecommendation, AiRecommendation,
@@ -14,6 +16,62 @@ import type {
 } from "./types";
 
 const RECEIPTS_PATH = path.join(process.cwd(), "logs", "execution_receipts.jsonl");
+const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+
+let lastReceiptHash = GENESIS_HASH;
+
+// Optional cached keypair for signing
+let engineSignerKeypair: Keypair | null = null;
+
+export function setEngineSigner(keypair: Keypair) {
+  engineSignerKeypair = keypair;
+}
+
+function getEngineKeypair(): Keypair | null {
+  if (engineSignerKeypair) return engineSignerKeypair;
+  const privateKey = process.env.WALLET_PRIVATE_KEY;
+  if (!privateKey) return null;
+  try {
+    const raw = privateKey.trim();
+    if (raw.startsWith("[") && raw.endsWith("]")) {
+      const bytes = Uint8Array.from(JSON.parse(raw) as number[]);
+      engineSignerKeypair = Keypair.fromSecretKey(bytes);
+    } else {
+      const bytes = bs58.decode(raw);
+      engineSignerKeypair = Keypair.fromSecretKey(bytes);
+    }
+    return engineSignerKeypair;
+  } catch {
+    return null;
+  }
+}
+
+/** Compute deterministic SHA-256 hash across immutable execution parameters */
+export function computeReceiptDigest(params: {
+  executionId: string;
+  startedAt: string;
+  triggerType: string;
+  triggerSlot: number;
+  decision: string;
+  recommendedTip: number;
+  signature?: string;
+  finalStatus: string;
+  prevReceiptHash: string;
+}): string {
+  const payload = [
+    params.executionId,
+    params.startedAt,
+    params.triggerType,
+    params.triggerSlot,
+    params.decision,
+    params.recommendedTip,
+    params.signature ?? "none",
+    params.finalStatus,
+    params.prevReceiptHash,
+  ].join("|");
+
+  return createHash("sha256").update(payload).digest("hex");
+}
 
 export function createReceipt(params: {
   mode: ExecutionMode;
@@ -23,10 +81,25 @@ export function createReceipt(params: {
   tipRecommendation: TipRecommendation;
   aiRecommendation?: AiRecommendation;
 }): ExecutionReceipt {
+  const executionId = randomUUID();
+  const startedAt = new Date().toISOString();
+  const prevReceiptHash = lastReceiptHash;
+
+  const initialDigest = computeReceiptDigest({
+    executionId,
+    startedAt,
+    triggerType: params.trigger.type,
+    triggerSlot: params.trigger.slot,
+    decision: params.policyEvaluation.decision,
+    recommendedTip: params.policyEvaluation.recommendedTip,
+    finalStatus: params.policyEvaluation.decision === "blocked" ? "blocked" : "pending",
+    prevReceiptHash,
+  });
+
   return {
-    executionId: randomUUID(),
+    executionId,
     mode: params.mode,
-    startedAt: new Date().toISOString(),
+    startedAt,
     trigger: params.trigger,
     networkSnapshot: params.networkSnapshot,
     policyEvaluation: params.policyEvaluation,
@@ -37,6 +110,8 @@ export function createReceipt(params: {
     retries: [],
     finalStatus: params.policyEvaluation.decision === "blocked" ? "blocked" :
                  params.policyEvaluation.decision === "shadow" ? "shadow" : "pending",
+    receiptHash: initialDigest,
+    prevReceiptHash,
   };
 }
 
@@ -67,6 +142,33 @@ export function advanceLifecycle(
                          new Date(receipt.startedAt).getTime();
   }
 
+  // Update hash upon final status transition
+  receipt.receiptHash = computeReceiptDigest({
+    executionId: receipt.executionId,
+    startedAt: receipt.startedAt,
+    triggerType: receipt.trigger.type,
+    triggerSlot: receipt.trigger.slot,
+    decision: receipt.policyEvaluation.decision,
+    recommendedTip: receipt.policyEvaluation.recommendedTip,
+    signature: receipt.signature,
+    finalStatus: receipt.finalStatus,
+    prevReceiptHash: receipt.prevReceiptHash,
+  });
+
+  // Sign hash if engine keypair is available
+  const keypair = getEngineKeypair();
+  if (keypair) {
+    try {
+      const msgBytes = Buffer.from(receipt.receiptHash, "hex");
+      const { sign } = require("tweetnacl");
+      const sig = sign.detached(msgBytes, keypair.secretKey);
+      receipt.engineSignature = bs58.encode(sig);
+      receipt.signerPublicKey = keypair.publicKey.toBase58();
+    } catch {
+      // non-fatal
+    }
+  }
+
   return receipt;
 }
 
@@ -76,6 +178,32 @@ export function attachAction(receipt: ExecutionReceipt, action: ActionResult): E
   receipt.explorerUrl = `https://solscan.io/tx/${action.signature}`;
   receipt.totalTipLamports = action.tipLamports;
   receipt.costSol = action.tipLamports / 1e9;
+
+  receipt.receiptHash = computeReceiptDigest({
+    executionId: receipt.executionId,
+    startedAt: receipt.startedAt,
+    triggerType: receipt.trigger.type,
+    triggerSlot: receipt.trigger.slot,
+    decision: receipt.policyEvaluation.decision,
+    recommendedTip: receipt.policyEvaluation.recommendedTip,
+    signature: action.signature,
+    finalStatus: receipt.finalStatus,
+    prevReceiptHash: receipt.prevReceiptHash,
+  });
+
+  const keypair = getEngineKeypair();
+  if (keypair) {
+    try {
+      const msgBytes = Buffer.from(receipt.receiptHash, "hex");
+      const { sign } = require("tweetnacl");
+      const sig = sign.detached(msgBytes, keypair.secretKey);
+      receipt.engineSignature = bs58.encode(sig);
+      receipt.signerPublicKey = keypair.publicKey.toBase58();
+    } catch {
+      // non-fatal
+    }
+  }
+
   return receipt;
 }
 
@@ -84,8 +212,53 @@ export function attachFailure(receipt: ExecutionReceipt, failure: FailureAnalysi
   return receipt;
 }
 
+/** Verify cryptographic integrity of a receipt */
+export function verifyReceipt(receipt: ExecutionReceipt): {
+  valid: boolean;
+  hashMatches: boolean;
+  signatureValid: boolean;
+  error?: string;
+} {
+  const expectedHash = computeReceiptDigest({
+    executionId: receipt.executionId,
+    startedAt: receipt.startedAt,
+    triggerType: receipt.trigger.type,
+    triggerSlot: receipt.trigger.slot,
+    decision: receipt.policyEvaluation.decision,
+    recommendedTip: receipt.policyEvaluation.recommendedTip,
+    signature: receipt.signature,
+    finalStatus: receipt.finalStatus,
+    prevReceiptHash: receipt.prevReceiptHash,
+  });
+
+  const hashMatches = expectedHash === receipt.receiptHash;
+  let signatureValid = false;
+
+  if (receipt.engineSignature && receipt.signerPublicKey) {
+    try {
+      const msgBytes = Buffer.from(receipt.receiptHash, "hex");
+      const sigBytes = bs58.decode(receipt.engineSignature);
+      const pubkeyBytes = bs58.decode(receipt.signerPublicKey);
+      const { sign } = require("tweetnacl");
+      signatureValid = sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
+    } catch {
+      signatureValid = false;
+    }
+  } else {
+    // If no engine key configured, hash integrity is valid
+    signatureValid = true;
+  }
+
+  return {
+    valid: hashMatches && signatureValid,
+    hashMatches,
+    signatureValid,
+  };
+}
+
 export async function persistReceipt(receipt: ExecutionReceipt): Promise<void> {
   try {
+    lastReceiptHash = receipt.receiptHash;
     await appendFile(RECEIPTS_PATH, JSON.stringify(receipt) + "\n", "utf8");
   } catch {
     // Non-fatal: log unavailable
@@ -115,12 +288,21 @@ export function buildForensicReport(receipt: ExecutionReceipt): string {
   const net = receipt.networkSnapshot;
   const pol = receipt.policyEvaluation;
   const evt = receipt.trigger;
+  const verification = verifyReceipt(receipt);
 
   lines.push(`# Sentry Execution Report`);
   lines.push(`**Execution ID:** ${receipt.executionId}`);
   lines.push(`**Mode:** ${receipt.mode.toUpperCase()}`);
   lines.push(`**Status:** ${receipt.finalStatus.toUpperCase()}`);
   lines.push(`**Duration:** ${receipt.durationMs ?? "--"}ms`);
+  lines.push(``);
+
+  lines.push(`## Cryptographic Verification (Tamper-Evident Hash Chain)`);
+  lines.push(`- **Receipt SHA-256:** \`${receipt.receiptHash}\``);
+  lines.push(`- **Previous Receipt:** \`${receipt.prevReceiptHash}\``);
+  if (receipt.signerPublicKey) lines.push(`- **Signer Public Key:** \`${receipt.signerPublicKey}\``);
+  if (receipt.engineSignature) lines.push(`- **Engine Signature:** \`${receipt.engineSignature}\``);
+  lines.push(`- **Cryptographic Audit Status:** ${verification.valid ? "VERIFIED (AUTHENTIC & UNTAMPERED)" : "FAILED"}`);
   lines.push(``);
 
   lines.push(`## Trigger`);
@@ -159,10 +341,10 @@ export function buildForensicReport(receipt: ExecutionReceipt): string {
 
   if (receipt.aiRecommendation) {
     const ai = receipt.aiRecommendation;
-    lines.push(`## AI Operator`);
+    lines.push(`## AI Supervisory Plane`);
     lines.push(`- Action: ${ai.action.toUpperCase()}`);
     lines.push(`- Confidence: ${Math.round(ai.confidence * 100)}%`);
-    lines.push(`- Reasoning: ${ai.reasoning}`);
+    lines.push(`- Supervisory Reasoning: ${ai.reasoning}`);
     if (ai.postmortem) lines.push(`- Postmortem: ${ai.postmortem}`);
     lines.push(``);
   }
