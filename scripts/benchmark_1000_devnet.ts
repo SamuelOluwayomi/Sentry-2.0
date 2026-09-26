@@ -192,7 +192,8 @@ const MEMO_PROG  = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 const LOG_DIR    = path.join(process.cwd(), "logs");
 const MATRIX_OUT = path.join(LOG_DIR, "devnet_1000_matrix.jsonl");
 const SUMMARY_OUT = path.join(LOG_DIR, "devnet_1000_summary.json");
-const TOTAL_RUNS  = 1000;
+const argRuns = process.argv.slice(2).find(a => /^\d+$/.test(a));
+const TOTAL_RUNS  = parseInt(process.env.TOTAL_RUNS || argRuns || "1000", 10);
 
 // Throttle: ms delay between batches to avoid RPC rate limiting
 const BATCH_SIZE  = 5;
