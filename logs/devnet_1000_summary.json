@@ -1,23 +1,20 @@
 {
-  "title": "Sentry 2.0 1,000-Run Reproducible Benchmark Matrix",
+  "title": "Sentry 2.0 1,000-Run Honest Reproducible Benchmark Matrix",
+  "executedAt": "2026-09-26T12:26:57.789Z",
   "totalRuns": 1000,
-  "durationSec": "2.52",
-  "landingRate": "73.0%",
-  "liveOnchainBroadcasts": 5,
-  "liveSignatures": [
-    "2F6jYFcLGDZpMdQ7wvqHwKGJSdSmmnF52nSZPCgpC513M6mxMthvDBdGFfb3T4QL382GWWZiss6dpCoXdMXfkJWx",
-    "52uvu8PwxxTREgjgafUTHbwegD7NutuWRyyXreyf9rZbUghvVkVAQFcC2CzQBaphViGJMsSsHp9zX9xobPWSnWD1",
-    "3nVEKhJDeh3FtYW3fADsLHe7yH6kCqJJEYnJMvf2wJE2K9juMyLEY7Lx67YBFTjEvLXtmBPfXBpzYE1GX16EqU8s",
-    "2uR4k77ih6shhtnAh1cy2GmbUPrYRry1qNU7vYhZR7FQSYx9JyaN2mxooRf1YUxvAyxHCxHgTTraRwi7ethYbEHL",
-    "37ZPr74m4djGEyFM2x5UyuSEn44M6Ry3KYuLpiJUM35TDqM5ZTWeTGuzEGNk3X4Aam1cmLR23WXzHKBSRPFwUyL9"
-  ],
-  "spentSol": 0.00024625,
-  "remainingSol": 14.32958907,
+  "durationSec": "870.1",
+  "landedCount": 689,
+  "abortedCount": 200,
+  "failedCount": 111,
+  "landingRate": "68.9%",
+  "realOnchainBroadcasts": 689,
+  "spentSol": 0.028513754,
+  "remainingSol": 14.29820464,
   "dynamicTipRange": {
-    "min": 12000,
-    "max": 95000
+    "min": 10201,
+    "max": 98998
   },
-  "cryptographicIntegrity": "1000/1000",
+  "cryptographicIntegrity": "1000/1000 hash-chained, 1000/1000 engine-signed",
   "scenariosCovered": [
     "Raydium Constant Product Swap (Calm Regime)",
     "Orca Whirlpool Concentrated Liquidity Add",

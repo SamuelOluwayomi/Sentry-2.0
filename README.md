@@ -300,28 +300,29 @@ $$\text{Landing Rate} = \frac{\text{Landed Runs}}{\text{Total Submissions}} \tim
 ### 6.2 Phase 2: 1,000-Run Comprehensive Multi-Scenario Devnet Stress Matrix
 To eliminate statistical bias and rigorously stress-test the Sentry 2.0 autonomous decision pipeline under extreme market congestion, we executed an automated **1,000-run reproducible benchmark matrix** across 10 distinct, non-identical real-world DeFi scenarios on Solana Devnet.
 
-$$\text{Matrix Landing Rate} = \frac{730 \text{ Landed}}{1,000 \text{ Total Runs}} = \mathbf{73.0\%}$$
+$$\text{Matrix Landing Rate} = \frac{689 \text{ Landed}}{1,000 \text{ Total Runs}} = \mathbf{68.9\%}$$
+*(Effective Execution Rate: $\mathbf{86.1\%}$ across 800 active broadcasts; remaining 200/200 runs were policy halts that prevented loss)*
 
 - **Total Benchmark Submissions**: 1,000 runs
-- **Total Devnet SOL Spent**: **0.000246 SOL** (only ~246,000 lamports consumed across 1,000 runs)
-- **Remaining Devnet Balance**: **14.3295 SOL** (funded wallet remains fully capitalized)
+- **Total Devnet SOL Spent**: **0.02851 SOL** (~28,514 lamports per run average)
+- **Remaining Devnet Balance**: **14.2982 SOL** (funded wallet remains fully capitalized)
 - **Mainnet Cost**: **$0.00** (zero mainnet capital burned for statistical stress testing)
-- **Dynamic Tip Range**: **12,000 to 95,000 lamports** (governed by live network regime classification)
+- **Dynamic Tip Range**: **10,201 to 98,998 lamports** (801 unique dynamic tip values across runs)
 - **Cryptographic Receipts**: **1,000 / 1,000 verified SHA-256 + Ed25519 hash-chain links**
 
 #### 10 Real-World Market Scenarios Evaluated
 | Scenario Identifier | Real-World Context | Injected Condition / Fault | Tip Range | Finalized | Halted / Aborted | Empirical Outcome |
 |---|---|---|---|---|---|---|
-| `raydium_calm_swap` | Raydium Constant Product Swap | Normal flow, low priority | 12,000 lamports | 100 / 100 | 0 | 100% landed via direct SWQoS |
-| `orca_whirlpool_liquidity` | Orca Whirlpool Concentrated LP | Moderate cluster congestion | 25,000 – 31,250 lamports | 100 / 100 | 0 | 100% landed with priority fees |
-| `memecoin_pump_launch` | High-Contention Token Launch | Rapid slot surge & gas race | 55,000 – 88,000 lamports | 100 / 100 | 0 | 100% landed via Jito block-engine |
-| `mev_liquidation_cascade` | Lending Protocol Liquidation | Block-space competition cascade | 85,000 – 95,000 lamports | 61 / 100 | 39 | 61% landed, 39% contested dropped |
-| `expired_blockhash_stall` | Validator Cluster Stall | Injected expired blockhash | 37,500 lamports | 100 / 100 | 0 | 100% auto-refreshed blockhash & landed on retry |
-| `tip_underbid_escalation` | Dynamic Tip Multiplier Escalation | Initial tip below cluster floor | Dynamic (1.5x escalation) | 69 / 100 | 31 | 69% recovered on escalation, 31% dropped safely |
-| `dual_route_failover` | Solami Beam Endpoint Outage | Beam 503 Service Unavailable | 35,000 lamports | 100 / 100 | 0 | 100% failover to Jito bundle fallback |
+| `raydium_calm_swap` | Raydium Constant Product Swap | Normal flow, low priority | 10,201 – 13,800 lamports | 100 / 100 | 0 | 100% landed via direct SWQoS |
+| `orca_whirlpool_liquidity` | Orca Whirlpool Concentrated LP | Moderate cluster congestion | 20,503 – 29,499 lamports | 100 / 100 | 0 | 100% landed with priority fees |
+| `memecoin_pump_launch` | High-Contention Token Launch | Rapid slot surge & gas race | 56,009 – 83,996 lamports | 100 / 100 | 0 | 100% landed via Jito block-engine |
+| `mev_liquidation_cascade` | Lending Protocol Liquidation | Block-space competition cascade | 81,006 – 98,998 lamports | 40 / 100 | 60 | 40% landed, 60% contested drops |
+| `expired_blockhash_stall` | Validator Cluster Stall | Injected expired blockhash | 33,003 – 41,999 lamports | 100 / 100 | 0 | 100% auto-refreshed blockhash & landed on retry |
+| `tip_underbid_escalation` | Dynamic Tip Multiplier Escalation | Initial tip below cluster floor | 22,505 – 37,498 lamports | 49 / 100 | 51 | 49% recovered on escalation, 51% dropped safely |
+| `dual_route_failover` | Solami Beam Endpoint Outage | Beam 503 Service Unavailable | 30,103 – 39,899 lamports | 100 / 100 | 0 | 100% failover to Jito bundle fallback |
 | `circuit_breaker_stop_loss` | Toxic Sandwich Flow Detection | Injected toxic arbitrage pattern | 0 lamports | 0 / 100 | 100 | 100% halted by invariant circuit breaker (0 fees lost) |
 | `preflight_slippage_abort` | Preflight Simulation Slippage Exceeded | Adverse pool price shift | 0 lamports | 0 / 100 | 100 | 100% preflight simulated abort (0 fees lost) |
-| `sub_millisecond_fast_path` | Ultra-Low Latency Arbitrage | Hot-path deterministic dispatch | 20,000 lamports | 100 / 100 | 0 | 100% dispatched in <1ms without LLM latency blocking |
+| `sub_millisecond_fast_path` | Ultra-Low Latency Arbitrage | Hot-path deterministic dispatch | 16,802 – 23,199 lamports | 100 / 100 | 0 | 100% dispatched in <1ms without LLM latency blocking |
 
 *Full 1,000-run machine-readable log: [`logs/devnet_1000_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/devnet_1000_matrix.jsonl)*
 *Summary metadata: [`logs/devnet_1000_summary.json`](file:///home/samuel/sentry%202.0/logs/devnet_1000_summary.json)*
@@ -517,7 +518,7 @@ Open `http://localhost:3000` to interact with the operational dashboard.
 | **Groq LPU Hardware Inference** | **Complete** | [`lib/agent-runner.ts`](file:///home/samuel/sentry%202.0/lib/agent-runner.ts), [`agent/src/index.ts`](file:///home/samuel/sentry%202.0/agent/src/index.ts) |
 | **Automated Fault Recovery** | **Complete** | [`lib/observatory.ts`](file:///home/samuel/sentry%202.0/lib/observatory.ts), [`engine/src/lifecycle.rs`](file:///home/samuel/sentry%202.0/engine/src/lifecycle.rs) |
 | **Decision Provenance Receipts** | **Complete** | [`lib/evidence-engine.ts`](file:///home/samuel/sentry%202.0/lib/evidence-engine.ts), [`logs/execution_receipts.jsonl`](file:///home/samuel/sentry%202.0/logs/execution_receipts.jsonl) |
-| **Empirical Mainnet Verification** | **Complete** | 22 recorded mainnet pilot runs (72.7% landing rate) + 1,000-run Devnet stress matrix (73.0% landing rate across 10 scenarios) |
+| **Empirical Mainnet Verification** | **Complete** | 22 recorded mainnet pilot runs (72.7% landing rate) + 1,000-run Devnet stress matrix (68.9% landing rate across 10 scenarios (86.1% execution attempt landing rate)) |
 | **Cryptographic Hash-Chain Ledger** | **Complete** | Deterministic SHA-256 + Ed25519 receipts linking all runs ([`lib/evidence-engine.ts`](file:///home/samuel/sentry%202.0/lib/evidence-engine.ts)) |
 | **Deterministic Scenario Replay** | **Complete** | CLI replay engine reproducing all 1,000 runs on Devnet & Mainnet (`npm run replay -- --run <N>`) |
 | **Interactive System Primer & UI** | **Complete** | [`app/page.tsx`](file:///home/samuel/sentry%202.0/app/page.tsx) (`#primer`, `#autonomous`, hover nav dropdowns) |
