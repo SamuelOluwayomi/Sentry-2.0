@@ -21,7 +21,10 @@
     "harness:mev": "npx tsx scripts/harnesses/harness_mev.ts",
     "benchmark:devnet": "jiti scripts/benchmark_1000_devnet.ts",
     "replay": "jiti scripts/replay_scenario.ts",
-    "benchmark:mainnet": "jiti scripts/benchmark_100_mainnet.ts"
+    "benchmark:mainnet": "jiti scripts/benchmark_100_mainnet.ts",
+    "check:live": "jiti scripts/check_live.ts",
+    "monitor": "jiti scripts/monitor_live.ts",
+    "tape": "jiti scripts/monitor_live.ts"
   },
   "description": "Next.js, Tailwind, @solana/react-hooks",
   "keywords": [

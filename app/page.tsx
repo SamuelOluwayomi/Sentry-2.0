@@ -3135,17 +3135,49 @@ export default function Home() {
             “
           </div>
 
-          <div className="max-w-3xl my-2">
+          <div className="max-w-4xl my-2">
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
-              Verified Proof
+              Verified Dual-Rail Evidence
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] tracking-tight">
               Evidence & Audit Trail
             </h2>
             <p className="mt-3 font-sans text-base sm:text-lg text-[#121212] leading-relaxed">
-              1,020 devnet runs executed across 51 protocols, 20 operation types, and 5 market regimes. 35% of runs use real fault injection — expired blockhashes, preflight simulation failures, RPC timeouts, duplicate transaction detection, and policy circuit-breaker aborts — each producing a genuine, distinct RPC error. Every run, whether finalized or failed, is SHA-256 hash-chained and Ed25519 engine-signed in an append-only JSONL ledger.
+              Sentry 2.0 validates transaction landing reliability across two isolated, cryptographically hash-chained benchmark matrices powered by Solami infrastructure:
             </p>
-            
+
+            <div className="mt-6 grid sm:grid-cols-2 gap-4">
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                    Live Mainnet-Beta Matrix
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#121212]">100 Runs</span>
+                </div>
+                <p className="font-sans text-xs text-[#5A564F] leading-relaxed">
+                  Real mainnet broadcasts routed through <strong>Solami Beam SWQoS</strong> with dynamic micro-tips (1,000–8,000 lamports) and Solana rent-reserve guardrails. Real on-chain signatures verified on Solana Explorer.
+                </p>
+                <div className="mt-3 font-mono text-[11px] text-[#121212] bg-white p-2 rounded border border-[#121212]/20">
+                  Log: logs/mainnet_100_matrix.jsonl
+                </div>
+              </div>
+
+              <div className="border-2 border-[#121212] bg-[#F7F4EC] p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-300">
+                    Devnet Stress Matrix
+                  </span>
+                  <span className="font-mono text-xs font-bold text-[#121212]">1,020 Runs</span>
+                </div>
+                <p className="font-sans text-xs text-[#5A564F] leading-relaxed">
+                  Extreme stress testing across 51 protocols and 5 market regimes. 35% fault-injection rate testing expired blockhashes, preflight simulation failures, duplicate transactions, RPC timeouts, and circuit breakers.
+                </p>
+                <div className="mt-3 font-mono text-[11px] text-[#121212] bg-white p-2 rounded border border-[#121212]/20">
+                  Log: logs/devnet_1000_matrix.jsonl
+                </div>
+              </div>
+            </div>
+
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <a
                 href="/api/evidence"
@@ -3156,14 +3188,12 @@ export default function Home() {
                 <ArrowSquareOut size={16} weight="bold" />
                 Download Raw Evidence JSON
               </a>
-              <a
-                href="https://sentry-doc.vercel.app/docs/system-overview"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-5 font-serif text-sm font-bold rounded-xl hover:bg-white transition-colors"
-              >
-                System Documentation ↗
-              </a>
+              <div className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-4 font-mono text-xs font-bold rounded-xl">
+                CLI: npm run check:live
+              </div>
+              <div className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-4 font-mono text-xs font-bold rounded-xl">
+                CLI: npm run monitor
+              </div>
             </div>
           </div>
 
