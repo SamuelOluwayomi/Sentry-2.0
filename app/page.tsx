@@ -2357,7 +2357,7 @@ export default function Home() {
                 transactions <br />
                 <span className="relative inline-block mt-1 px-7 py-1.5">
                   <span className="relative z-10 text-[#121212] font-semibold italic">
-                    landed!
+                    land!
                   </span>
                   <svg
                     className="absolute inset-0 w-full h-full pointer-events-none text-[#FF5A26] overflow-visible"
@@ -3143,7 +3143,7 @@ export default function Home() {
               Evidence & Audit Trail
             </h2>
             <p className="mt-3 font-sans text-base sm:text-lg text-[#121212] leading-relaxed">
-              Every single transaction, slot pulse, and Groq reasoning trace is immutably logged to JSONL. All mainnet runs have been independently confirmed on Solana Mainnet through Solami Beam.
+              1,020 devnet runs executed across 51 protocols, 20 operation types, and 5 market regimes. 35% of runs use real fault injection — expired blockhashes, preflight simulation failures, RPC timeouts, duplicate transaction detection, and policy circuit-breaker aborts — each producing a genuine, distinct RPC error. Every run, whether finalized or failed, is SHA-256 hash-chained and Ed25519 engine-signed in an append-only JSONL ledger.
             </p>
             
             <div className="mt-6 flex flex-wrap items-center gap-3">

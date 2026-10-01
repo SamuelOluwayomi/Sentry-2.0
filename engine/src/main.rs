@@ -6,10 +6,10 @@ mod lifecycle;
 
 use anyhow::Result;
 use solana_sdk::signature::{Keypair, Signer};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::Notify;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Shared state between the RPC slot poller and the main submission loop.
 /// The slot is updated every ~400ms via a background reqwest::Client poll.
@@ -20,9 +20,7 @@ struct SlotState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     if std::env::var("FAIL_TEST").as_deref() == Ok("expired-hash") {
         std::env::set_var("FORCE_EXPIRED_HASH", "true");
@@ -35,24 +33,33 @@ async fn main() -> Result<()> {
 
     let wallet_bytes: Vec<u8> = serde_json::from_str(&config.wallet_private_key)
         .expect("WALLET_PRIVATE_KEY must be a JSON array of bytes, e.g. [1,2,3,...]");
-    let keypair = Keypair::try_from(wallet_bytes.as_slice())
-        .expect("Invalid keypair bytes");
+    let keypair = Keypair::try_from(wallet_bytes.as_slice()).expect("Invalid keypair bytes");
     info!("Wallet: {}", keypair.pubkey());
 
     let rpc_client = solana_rpc_client::rpc_client::RpcClient::new(config.solana_rpc_url.clone());
     let balance = rpc_client.get_balance(&keypair.pubkey())?;
-    info!("Wallet balance: {} lamports ({:.6} SOL)", balance, balance as f64 / 1e9);
+    info!(
+        "Wallet balance: {} lamports ({:.6} SOL)",
+        balance,
+        balance as f64 / 1e9
+    );
 
     if balance < 50_000 {
-        anyhow::bail!("Wallet balance too low for bundle submissions. Need at least 50,000 lamports.");
+        anyhow::bail!(
+            "Wallet balance too low for bundle submissions. Need at least 50,000 lamports."
+        );
     }
 
     // Clean stale lifecycle logs from previous runs (only on fresh non-failure-test runs)
     if std::env::var("FAIL_TEST").is_err() {
-        let log_path_env = std::env::var("LIFECYCLE_LOG_PATH").unwrap_or_else(|_| "lifecycle_log.jsonl".to_string());
+        let log_path_env = std::env::var("LIFECYCLE_LOG_PATH")
+            .unwrap_or_else(|_| "lifecycle_log.jsonl".to_string());
         let log_path = std::path::Path::new(&log_path_env);
         if log_path.exists() {
-            info!("Removing stale lifecycle_log.jsonl from previous run: {:?}", log_path);
+            info!(
+                "Removing stale lifecycle_log.jsonl from previous run: {:?}",
+                log_path
+            );
             std::fs::remove_file(log_path).ok();
         }
         let logs_dir_env = std::env::var("LOGS_DIR").unwrap_or_else(|_| "../logs".to_string());
@@ -69,7 +76,9 @@ async fn main() -> Result<()> {
     });
 
     let initial_slot = rpc_client.get_slot().unwrap_or(0);
-    slot_state.latest_slot.store(initial_slot, Ordering::Relaxed);
+    slot_state
+        .latest_slot
+        .store(initial_slot, Ordering::Relaxed);
     info!("Initial RPC slot: {}", initial_slot);
 
     // Spawn WebSocket-equivalent slot poller as a background task.
@@ -83,9 +92,7 @@ async fn main() -> Result<()> {
     // Brief pause to let slot poller initialize (non-blocking to the main loop)
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
-    // ===================================================================
     //  Bundle submission loop
-    // ===================================================================
     info!("===============================================");
     info!("  Phase: Bundle Submission");
     info!("===============================================");
@@ -105,23 +112,24 @@ async fn main() -> Result<()> {
         info!("Current observed slot: {}", current_slot);
 
         // Gate submission on leader window proximity.
-        // Hold until we are within 2 slots of the nearest Jito leader.
-        // This is a best-effort check — if no schedule is available we proceed immediately.
-        // Leader window gating is only required for Jito.
-        // Beam handles leader routing internally; we submit immediately.
         if config.tx_provider == config::TxProvider::Jito {
             wait_for_leader_window(Arc::clone(&slot_state), &config.jito_block_engine_url).await;
         }
 
         // Determine tip and failure injection
-        let (tip_lamports, memo_text, intentional_failure) = if std::env::var("FAIL_TEST").as_deref() == Ok("zero-tip") {
+        let (tip_lamports, memo_text, intentional_failure) = if std::env::var("FAIL_TEST")
+            .as_deref()
+            == Ok("zero-tip")
+        {
             info!("FAIL TEST MODE: Forcing tip = 0 lamports (zero-tip failure)");
             (0u64, "Sentry | FAIL TEST: zero tip", true)
         } else if std::env::var("FAIL_TEST").as_deref() == Ok("expired-hash") {
             info!("FAIL TEST MODE: Forcing expired blockhash (expired-hash failure)");
             let tip = match config.tx_provider {
                 config::TxProvider::Beam => beam::get_dynamic_tip().await.unwrap_or(30_000),
-                config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000),
+                config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url)
+                    .await
+                    .unwrap_or(30_000),
             };
             (tip, "Sentry | FAIL TEST: expired blockhash", true)
         } else if total_runs >= 2 && run_num == total_runs - 1 {
@@ -201,20 +209,16 @@ async fn main() -> Result<()> {
                 let _ = sig_tx.send(run.signature.clone());
 
                 // Wait for stream to be ready (or timeout after 3s)
-                let _ = tokio::time::timeout(
-                    tokio::time::Duration::from_secs(3),
-                    ready_rx,
-                ).await;
+                let _ = tokio::time::timeout(tokio::time::Duration::from_secs(3), ready_rx).await;
 
                 // Track the bundle lifecycle
                 if run.status == lifecycle::BundleStatus::Submitted {
                     let bid = run.bundle_id.clone();
 
                     // Wait for Yellowstone watcher result (up to 55s)
-                    let ys_result = tokio::time::timeout(
-                        tokio::time::Duration::from_secs(58),
-                        watch_handle,
-                    ).await;
+                    let ys_result =
+                        tokio::time::timeout(tokio::time::Duration::from_secs(58), watch_handle)
+                            .await;
 
                     // Track whether Yellowstone confirmed so we can record it correctly
                     let yellowstone_confirmed = match ys_result {
@@ -240,7 +244,10 @@ async fn main() -> Result<()> {
                     let (ys_ep, ys_tok) = if yellowstone_confirmed {
                         (None, None)
                     } else {
-                        (Some(config.yellowstone_endpoint()), Some(config.yellowstone_token()))
+                        (
+                            Some(config.yellowstone_endpoint()),
+                            Some(config.yellowstone_token()),
+                        )
                     };
 
                     let provider_url = match config.tx_provider {
@@ -299,14 +306,21 @@ async fn main() -> Result<()> {
                     && run.status != lifecycle::BundleStatus::Landed
                     && run.status != lifecycle::BundleStatus::Pending
                 {
-                    info!("Run #{} failed ({}), attempting autonomous retry with fresh blockhash...", run_num, run.status);
-                    run.recovery = Some("Autonomous retry with fresh blockhash and recalculated tip".to_string());
+                    info!(
+                        "Run #{} failed ({}), attempting autonomous retry with fresh blockhash...",
+                        run_num, run.status
+                    );
+                    run.recovery = Some(
+                        "Autonomous retry with fresh blockhash and recalculated tip".to_string(),
+                    );
 
                     // Recalculate tip for the retry
                     let retry_tip = match config.tx_provider {
-                    config::TxProvider::Beam => beam::get_dynamic_tip().await.unwrap_or(30_000),
-                    config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url).await.unwrap_or(30_000),
-                };
+                        config::TxProvider::Beam => beam::get_dynamic_tip().await.unwrap_or(30_000),
+                        config::TxProvider::Jito => jito::get_dynamic_tip(&config.solana_rpc_url)
+                            .await
+                            .unwrap_or(30_000),
+                    };
                     info!("Retry tip: {} lamports", retry_tip);
 
                     let retry_result = match config.tx_provider {
@@ -318,7 +332,8 @@ async fn main() -> Result<()> {
                                 retry_tip,
                                 run_num,
                                 "Sentry | auto-retry",
-                            ).await
+                            )
+                            .await
                         }
                         config::TxProvider::Jito => {
                             jito::build_and_submit_bundle(
@@ -328,19 +343,23 @@ async fn main() -> Result<()> {
                                 retry_tip,
                                 run_num,
                                 "Sentry | auto-retry",
-                            ).await
+                            )
+                            .await
                         }
                     };
 
                     match retry_result {
                         Ok(mut retry_run) => {
-                            retry_run.submit_slot = Some(slot_state.latest_slot.load(Ordering::Relaxed));
+                            retry_run.submit_slot =
+                                Some(slot_state.latest_slot.load(Ordering::Relaxed));
 
                             if retry_run.status == lifecycle::BundleStatus::Submitted {
                                 let bid = retry_run.bundle_id.clone();
                                 let retry_provider_url = match config.tx_provider {
                                     config::TxProvider::Beam => config.beam_endpoint.as_str(),
-                                    config::TxProvider::Jito => config.jito_block_engine_url.as_str(),
+                                    config::TxProvider::Jito => {
+                                        config.jito_block_engine_url.as_str()
+                                    }
                                 };
                                 lifecycle::track_bundle(
                                     retry_provider_url,
@@ -365,7 +384,10 @@ async fn main() -> Result<()> {
                                 // Log the retry as a separate entry
                                 lifecycle::log_run(&retry_run);
                             } else {
-                                warn!("Retry also failed for run #{}: {}", run_num, retry_run.status);
+                                warn!(
+                                    "Retry also failed for run #{}: {}",
+                                    run_num, retry_run.status
+                                );
                             }
                         }
                         Err(e) => {
@@ -384,16 +406,10 @@ async fn main() -> Result<()> {
 
                 // Print lifecycle deltas if available
                 if let (Some(p), Some(c)) = (run.processed_at, run.confirmed_at) {
-                    info!(
-                        "  processed->confirmed: {}ms",
-                        (c - p).num_milliseconds()
-                    );
+                    info!("  processed->confirmed: {}ms", (c - p).num_milliseconds());
                 }
                 if let (Some(c), Some(f)) = (run.confirmed_at, run.finalized_at) {
-                    info!(
-                        "  confirmed->finalized: {}ms",
-                        (f - c).num_milliseconds()
-                    );
+                    info!("  confirmed->finalized: {}ms", (f - c).num_milliseconds());
                 }
             }
             Err(e) => {
@@ -499,11 +515,7 @@ async fn wait_for_leader_window(slot_state: Arc<SlotState>, jito_url: &str) {
                     json.get("result")
                         .or_else(|| json.as_array().map(|_| &json))
                         .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|s| s.as_u64())
-                                .collect()
-                        })
+                        .map(|arr| arr.iter().filter_map(|s| s.as_u64()).collect())
                         .unwrap_or_default()
                 }
                 Err(_) => vec![],
@@ -520,7 +532,11 @@ async fn wait_for_leader_window(slot_state: Arc<SlotState>, jito_url: &str) {
     let mut wait_logged = false;
     loop {
         let current = slot_state.latest_slot.load(Ordering::Relaxed);
-        let nearest = leader_slots.iter().filter(|&&s| s >= current).min().copied();
+        let nearest = leader_slots
+            .iter()
+            .filter(|&&s| s >= current)
+            .min()
+            .copied();
 
         match nearest {
             Some(leader_slot) => {

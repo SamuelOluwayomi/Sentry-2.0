@@ -1,31 +1,29 @@
 {
-  "title": "Sentry 2.0 1,000-Run Honest Reproducible Benchmark Matrix",
-  "executedAt": "2026-09-28T21:17:13.090Z",
-  "totalRuns": 1000,
-  "durationSec": "854.8",
-  "landedCount": 1000,
-  "abortedCount": 0,
-  "failedCount": 0,
-  "landingRate": "100.0%",
-  "realOnchainBroadcasts": 1000,
-  "spentSol": 0.047139904,
-  "remainingSol": 14.250110289,
-  "dynamicTipRange": {
-    "min": 10439,
-    "max": 99620
+  "title": "Sentry 2.0 1,040-Run Fault-Injected Devnet Benchmark Matrix",
+  "executedAt": "2026-10-01T08:29:26.551Z",
+  "totalRuns": 1020,
+  "durationSec": "1041.4",
+  "landedCount": 663,
+  "abortedCount": 51,
+  "failedCount": 306,
+  "landingRate": "65.0%",
+  "failureRate": "30.0%",
+  "realOnchainBroadcasts": 663,
+  "failureClassBreakdown": {
+    "rpc_timeout": 102,
+    "blockhash_not_found": 105,
+    "duplicate_tx_slipped_through": 3,
+    "preflight_simulation_failed": 51,
+    "already_processed": 45,
+    "circuit_open": 51
   },
-  "cryptographicIntegrity": "1000/1000 hash-chained, 1000/1000 engine-signed",
-  "scenariosCovered": [
-    "Raydium Constant Product Swap (Calm Regime)",
-    "Orca Whirlpool Concentrated Liquidity Add",
-    "Meme-Token Launch / Rapid Slot Surge",
-    "Lending Protocol Liquidation Cascade",
-    "Validator Stall / Blockhash Expiry Recovery",
-    "Dynamic Tip Multiplier Escalation",
-    "Beam-to-Jito Dynamic Route Failover",
-    "Toxic Flow Automated Circuit Breaker Halt",
-    "Preflight Simulation Slippage Abort",
-    "Sub-Millisecond Deterministic Hot Path Dispatch"
-  ],
+  "spentSol": 0.044010014,
+  "remainingSol": 14.130623378,
+  "dynamicTipRange": {
+    "min": 8643,
+    "max": 120000
+  },
+  "cryptographicIntegrity": "1020/1020 hash-chained, 1020/1020 engine-signed",
+  "scenariosCovered": 1020,
   "matrixLogPath": "logs/devnet_1000_matrix.jsonl"
 }
