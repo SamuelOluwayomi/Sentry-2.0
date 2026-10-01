@@ -20,7 +20,9 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-const MATRIX_PATH = path.join(process.cwd(), "logs", "devnet_1000_matrix.jsonl");
+const MATRIX_PATH = isMainnet && fs.existsSync(path.join(process.cwd(), "logs", "mainnet_100_matrix.jsonl"))
+  ? path.join(process.cwd(), "logs", "mainnet_100_matrix.jsonl")
+  : path.join(process.cwd(), "logs", "devnet_1000_matrix.jsonl");
 
 if (!fs.existsSync(MATRIX_PATH)) {
   console.error(`Error: Benchmark matrix file not found at ${MATRIX_PATH}. Run 'npm run benchmark:devnet' first.`);

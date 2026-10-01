@@ -20,7 +20,8 @@
     "harness:budget": "npx tsx scripts/harnesses/harness_budget.ts",
     "harness:mev": "npx tsx scripts/harnesses/harness_mev.ts",
     "benchmark:devnet": "jiti scripts/benchmark_1000_devnet.ts",
-    "replay": "jiti scripts/replay_scenario.ts"
+    "replay": "jiti scripts/replay_scenario.ts",
+    "benchmark:mainnet": "jiti scripts/benchmark_100_mainnet.ts"
   },
   "description": "Next.js, Tailwind, @solana/react-hooks",
   "keywords": [
