@@ -14,7 +14,7 @@ import type {
 } from "./types";
 import {
   fromBlurMessage, fromYellowstoneMessage,
-  createFaultEvent, createSyntheticBlurEvent,
+  createFaultEvent, fetchLiveTransferEvents,
   scoreOpportunity,
 } from "./event-engine";
 import { getNetworkSnapshot, recordRouteLatency } from "./network-snapshot";
@@ -92,7 +92,7 @@ export function getSystemHealth(): SystemHealth {
       name: "Solami Blur",
       status: blurHealthy ? "healthy" : "standby",
       lastCheckedAt: new Date().toISOString(),
-      detail: blurHealthy ? undefined : "Synthetic events active",
+      detail: blurHealthy ? "Live block scanner active" : "Blur not connected; block scanner idle",
     },
     {
       name: "Solami Beam",
@@ -225,9 +225,15 @@ export async function processEvent(event: SentryEvent): Promise<ExecutionReceipt
   event.opportunityScore = scoreOpportunity(event, network);
 
   // 3. Evaluate policy (deterministic)
-  const walletBalanceSol = keypair
-    ? undefined // we'd need an async call here -- skip for now
-    : undefined;
+  let walletBalanceSol: number | undefined;
+  if (keypair && executionMode === "live") {
+    try {
+      const lamports = await new Connection(rpcUrl, "confirmed").getBalance(keypair.publicKey, "confirmed");
+      walletBalanceSol = lamports / 1e9;
+    } catch {
+      walletBalanceSol = undefined;
+    }
+  }
   const policy = evaluatePolicy(event, network, executionMode, walletBalanceSol);
 
   // 4. Build tip recommendation
@@ -370,15 +376,29 @@ export async function processEvent(event: SentryEvent): Promise<ExecutionReceipt
       receipt = advanceLifecycle(receipt, "processed", "rpc", network.slot);
       eventBus.emit("receipt", receipt);
 
-      // Brief confirmation wait (Yellowstone would replace this in full implementation)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      receipt = advanceLifecycle(receipt, "confirmed", "rpc", network.slot + 1);
-      eventBus.emit("receipt", receipt);
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      receipt = advanceLifecycle(receipt, "finalized", "rpc", network.slot + 32);
-      eventBus.emit("receipt", receipt);
+      // Real confirmation tracking: poll the RPC node for actual signature status.
+      {
+        const statusConn = new Connection(rpcUrl, "confirmed");
+        const stages = ["processed", "confirmed", "finalized"] as const;
+        let reached = -1;
+        const deadline = Date.now() + 60_000;
+        while (Date.now() < deadline && reached < 2) {
+          const st = (await statusConn.getSignatureStatuses(
+            [result.signature], { searchTransactionHistory: true },
+          )).value[0];
+          if (st) {
+            if (st.err) throw new Error(`On-chain error: ${JSON.stringify(st.err)}`);
+            const idx = stages.indexOf((st.confirmationStatus ?? "processed") as typeof stages[number]);
+            for (let i = reached + 1; i <= idx; i++) {
+              receipt = advanceLifecycle(receipt, stages[i], "rpc", st.slot);
+              eventBus.emit("receipt", receipt);
+            }
+            reached = Math.max(reached, idx);
+          }
+          if (reached < 2) await new Promise(resolve => setTimeout(resolve, 800));
+        }
+        if (reached < 0) throw new Error("Confirmation timed out: signature not seen on-chain within 60s");
+      }
 
       recordExecutionOutcome(true);
       recordExecution(
@@ -437,47 +457,52 @@ export function getForensicReport(executionId: string): string | null {
   return buildForensicReport(receipt);
 }
 
-// -- Synthetic Event Loop (when Blur is not connected) --
-let syntheticLoopRunning = false;
+// -- Live Event Loop: real confirmed blocks from the configured RPC --
+let liveLoopRunning = false;
+let lastScannedSlot = 0;
 
-export function startSyntheticEventLoop(intervalMs = 8000) {
-  if (syntheticLoopRunning) return;
-  syntheticLoopRunning = true;
+export function startLiveEventLoop(intervalMs = 2000) {
+  if (liveLoopRunning) return;
+  liveLoopRunning = true;
 
   const loop = async () => {
-    if (!syntheticLoopRunning) return;
+    if (!liveLoopRunning) return;
     try {
       const snapshot = await getNetworkSnapshot(rpcUrl);
-      currentSlot = snapshot.slot || currentSlot + 1;
-      const event = createSyntheticBlurEvent(currentSlot);
-      eventBus.emit("event", event);
-      // Process autonomously in background
-      processEvent(event).catch(() => {/* silent */});
+      const head = (snapshot.slot || currentSlot) - 32; // RPC serves full blocks ~32 slots behind head
+      currentSlot = snapshot.slot || currentSlot;
+      if (lastScannedSlot === 0 || head - lastScannedSlot > 20) lastScannedSlot = head - 1;
+      const target = Math.min(head, lastScannedSlot + 4);
+      for (let slot = lastScannedSlot + 1; slot <= target; slot++) {
+        const events = await fetchLiveTransferEvents(rpcUrl, slot).catch(() => []);
+        for (const event of events) {
+          eventBus.emit("event", event);
+          processEvent(event).catch(() => {/* receipt records failure */});
+        }
+        lastScannedSlot = slot;
+      }
+      blurHealthy = true;
     } catch {
-      // non-fatal
+      // non-fatal: retry on next tick
     }
     setTimeout(loop, intervalMs);
   };
 
-  setTimeout(loop, 2000);
+  setTimeout(loop, 500);
 }
 
-export function stopSyntheticEventLoop() {
-  syntheticLoopRunning = false;
+export function stopLiveEventLoop() {
+  liveLoopRunning = false;
 }
 
-// -- Fault Injection Entry Point --
+// -- Fault Test Entry Point (real transactions, real network errors) --
 export async function injectFault(faultType: FaultType): Promise<ExecutionReceipt> {
-  const snapshot = await getNetworkSnapshot(rpcUrl);
-  currentSlot = snapshot.slot || currentSlot + 1;
-  const event = createFaultEvent(faultType, currentSlot);
-  // Override mode to live for fault injection demo
-  const savedMode = executionMode;
-  if (executionMode === "observe") {
-    setExecutionMode("shadow");
+  if (executionMode !== "live") {
+    throw new Error("Fault tests send real transactions. Set execution mode to LIVE first.");
   }
+  const snapshot = await getNetworkSnapshot(rpcUrl);
+  currentSlot = snapshot.slot || currentSlot;
+  const event = createFaultEvent(faultType, currentSlot);
   eventBus.emit("event", event);
-  const receipt = await processEvent(event);
-  setExecutionMode(savedMode);
-  return receipt;
+  return processEvent(event);
 }

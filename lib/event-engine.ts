@@ -229,21 +229,18 @@ export function fromYellowstoneMessage(
   }
 }
 
-/** Inject a synthetic fault event for demo / testing. */
+/** Operator-triggered fault test. The resulting transaction is real and the failure comes from the live network. */
 export function createFaultEvent(faultType: FaultType, slot: number): SentryEvent {
   const descriptions: Record<FaultType, string> = {
     expired_blockhash: "Fault injected: blockhash will be expired at submission",
     low_tip: "Fault injected: tip set below Beam minimum floor",
     zero_tip: "Fault injected: zero-lamport tip",
-    rpc_failure: "Fault injected: RPC endpoint will return 503",
-    stream_disconnect: "Fault injected: Yellowstone stream disconnect",
-    rate_limit: "Fault injected: rate limit exceeded response",
-    simulation_failure: "Fault injected: simulation will return error",
+    simulation_failure: "Fault test: simulating a transfer larger than wallet balance",
   };
 
   return {
     id: `fault-${faultType}-${randomUUID()}`,
-    source: "synthetic",
+    source: "operator",
     type: "fault_injection",
     slot,
     receivedAt: new Date().toISOString(),
@@ -255,40 +252,64 @@ export function createFaultEvent(faultType: FaultType, slot: number): SentryEven
   };
 }
 
-/** Create a synthetic market event for demo mode (when Blur is not connected). */
-export function createSyntheticBlurEvent(slot: number): SentryEvent {
-  const pools = [
-    "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-    "9Vr2HcS1YwBkE3bXkbKi8FdjK3iFnGYGLmQ4NwmkJhf",
-    "EfEfYp4QCzSAHNp4PNdRGxCR5ew5RLXmRQGjKwFbtPmm",
-  ];
-  const types: Array<{ type: EventType; liq: number; vol: number; desc: string }> = [
-    { type: "liquidity_change", liq: 12_000 + Math.random() * 80_000, vol: 5_000 + Math.random() * 30_000, desc: "" },
-    { type: "swap", liq: 0, vol: 8_000 + Math.random() * 50_000, desc: "" },
-    { type: "large_transfer", liq: 0, vol: 0, desc: "" },
-  ];
-  const chosen = types[Math.floor(Math.random() * types.length)];
-  const pool = pools[Math.floor(Math.random() * pools.length)];
-  const sol = 10 + Math.random() * 200;
-
-  const decoded: SentryEvent["decoded"] = { pool };
-  if (chosen.liq) decoded.liquidityDeltaUsd = Math.round(chosen.liq);
-  if (chosen.vol) decoded.volumeDeltaUsd = Math.round(chosen.vol);
-  if (chosen.type === "large_transfer") {
-    decoded.transferAmountSol = Math.round(sol * 100) / 100;
-    decoded.description = `Large transfer: ${decoded.transferAmountSol} SOL`;
-  } else if (chosen.type === "liquidity_change") {
-    decoded.description = `Liquidity +${decoded.liquidityDeltaUsd?.toLocaleString()} USD`;
-  } else {
-    decoded.description = `Swap: ${decoded.volumeDeltaUsd?.toLocaleString()} USD`;
-  }
-
-  return {
-    id: `synth-blur-${slot}-${randomUUID()}`,
-    source: "blur",
-    type: chosen.type,
-    slot,
-    receivedAt: new Date().toISOString(),
-    decoded,
+/**
+ * Live on-chain event source. Pulls a real confirmed block over JSON-RPC and
+ * emits one `large_transfer` event per transaction whose largest account
+ * balance increase is >= minSol. Nothing here is generated locally.
+ */
+export async function fetchLiveTransferEvents(
+  rpcUrl: string,
+  slot: number,
+  minSol = Number(process.env.LARGE_TRANSFER_MIN_SOL ?? 1000),
+): Promise<SentryEvent[]> {
+  const resp = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: 1, method: "getBlock",
+      params: [slot, {
+        encoding: "json", transactionDetails: "full", rewards: false,
+        commitment: "confirmed", maxSupportedTransactionVersion: 1,
+      }],
+    }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!resp.ok) return [];
+  const json = await resp.json() as {
+    result?: { transactions: Array<{
+      transaction: { signatures: string[]; message: { accountKeys: string[] } };
+      meta: { err: unknown; preBalances: number[]; postBalances: number[] } | null;
+    }> };
   };
+  const txs = json.result?.transactions ?? [];
+  const events: SentryEvent[] = [];
+  for (const tx of txs) {
+    const meta = tx.meta;
+    if (!meta || meta.err) continue;
+    let best = 0;
+    let bestIdx = -1;
+    for (let i = 0; i < meta.postBalances.length; i++) {
+      const delta = meta.postBalances[i] - meta.preBalances[i];
+      if (delta > best) { best = delta; bestIdx = i; }
+    }
+    const sol = best / 1e9;
+    if (sol < minSol) continue;
+    const signature = tx.transaction.signatures[0];
+    const id = `rpc-${signature}`;
+    if (deduplicate(id)) continue;
+    events.push({
+      id,
+      source: "rpc",
+      type: "large_transfer",
+      slot,
+      receivedAt: new Date().toISOString(),
+      decoded: {
+        signature,
+        account: tx.transaction.message.accountKeys[bestIdx],
+        transferAmountSol: Math.round(sol * 100) / 100,
+        description: `Large transfer: ${Math.round(sol * 100) / 100} SOL`,
+      },
+    });
+  }
+  return events;
 }

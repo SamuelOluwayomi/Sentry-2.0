@@ -144,6 +144,16 @@ File: [`lib/evidence-engine.ts`](file:///home/samuel/sentry%202.0/lib/evidence-e
 
 Generates an append-only JSONL receipt chain where every decision is SHA-256 hash-chained to the prior receipt and HMAC-SHA256 signed by the engine's keypair. Tampering with any historical entry invalidates all downstream hashes.
 
+### 3.7 Cuckoo Filter Duplicate Suppression
+File: [`lib/cuckoo-filter.ts`](file:///home/samuel/sentry%202.0/lib/cuckoo-filter.ts)
+
+Zero-dependency partial-key cuckoo filter (16-bit fingerprints, 4 slots per bucket, power-of-2 bucket count so the alternate index `i2 = i1 XOR hash(fp)` is a true involution). `SlidingWindowCuckooDeduplicator` expires each entry after 150 slots, matching the blockhash validity window. Unlike a Bloom filter it supports deletion, so expiry is exact. Live call sites:
+- `evaluatePolicy` suppresses repeated events before scoring or LLM inference (`blockReason: duplicate_suppressed`).
+- `executeAction` refuses to dispatch the same signed transaction twice inside its window.
+- Both benchmark runners route `duplicate_tx` resends through the filter before touching RPC.
+
+False-positive rate is bounded by roughly `2b / 2^16` (about 0.012%) at high load; a false positive suppresses a legitimate event, never admits a duplicate.
+
 ---
 
 ## 4. Dual Benchmark Matrices

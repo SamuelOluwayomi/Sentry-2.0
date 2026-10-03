@@ -1,3 +1,4 @@
+import { liveDeduplicator } from "./cuckoo-filter";
 // Sentry 2.0 -- Action Engine
 // Builds, simulates, signs, and submits transactions.
 // Selects optimal route. Enforces hard guardrails.
@@ -200,8 +201,17 @@ export async function executeAction(params: {
       simulationError = e instanceof Error ? e.message : String(e);
     }
   } else {
-    simulationPassed = false;
-    simulationError = "Simulation failure injected by fault engine";
+    // Build a transfer the wallet cannot afford and let the RPC node simulate it.
+    const balance = await connection.getBalance(keypair.publicKey, "confirmed");
+    const failTx = new Transaction({ recentBlockhash: blockhash, feePayer: keypair.publicKey });
+    failTx.add(SystemProgram.transfer({
+      fromPubkey: keypair.publicKey,
+      toPubkey: tipPubkey,
+      lamports: balance + 1_000_000_000,
+    }));
+    const failSim = await connection.simulateTransaction(failTx);
+    simulationPassed = !failSim.value.err;
+    simulationError = failSim.value.err ? JSON.stringify(failSim.value.err) : undefined;
   }
 
   // Build and sign transaction
@@ -214,15 +224,15 @@ export async function executeAction(params: {
   const rawSig = tx.signatures[0]?.signature;
   const actualSig = rawSig ? Buffer.from(rawSig).toString("base64") : randomUUID();
 
-  // Fault: RPC failure (don't actually submit)
-  if (faultType === "rpc_failure") {
-    throw new Error("RPC endpoint returned 503 Service Unavailable (injected fault)");
+  // Real simulation failure: the node itself rejects an over-balance transfer
+  if (faultType === "simulation_failure" && simulationError) {
+    throw new Error(`Simulation failed: ${simulationError}`);
   }
-  if (faultType === "rate_limit") {
-    throw new Error("Rate limit exceeded: Too many requests (injected fault)");
-  }
-  if (faultType === "stream_disconnect") {
-    throw new Error("Yellowstone stream disconnected during confirmation (injected fault)");
+
+  // Cuckoo-filter preflight: never dispatch the same signed transaction twice
+  // within its 150-slot blockhash validity window.
+  if (liveDeduplicator.checkAndRecord(`tx:${signature}:${actualSig}`, network.slot)) {
+    throw new Error(`duplicate_suppressed: transaction already dispatched (${actualSig.slice(0, 16)})`);
   }
 
   // Select endpoint

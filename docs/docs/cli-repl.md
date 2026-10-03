@@ -18,7 +18,6 @@ Sentry CLI supports one-shot command execution for dev scripting and automated c
 | `sentry verify [sig]` | Audits a specific transaction signature directly on the Solana Mainnet blockchain. |
 | `sentry evidence` | Calculates latency statistics and compiles a judge-ready markdown verification report. |
 | `sentry serve` | Starts the standalone developer HTTP API server on port 3050 (`npx tsx server.ts`). |
-| `sentry harness [type]` | Runs one of the 6 validation harnesses: `faults`, `trader`, `requote`, `sniper`, `budget`, `mev`. |
 
 ### Interactive REPL Console
 Executing `sentry` without any arguments drops the operator into a persistent shell. This prevents the command loop from closing after execution, keeping services running and allowing subsequent command invocations:

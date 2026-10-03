@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   setExecutionMode, getExecutionMode,
   getSystemHealth, getRecentReceipts,
-  injectFault, processEvent, startSyntheticEventLoop,
-  stopSyntheticEventLoop, getForensicReport,
+  injectFault, processEvent, startLiveEventLoop,
+  stopLiveEventLoop, getForensicReport,
 } from "@/lib/autonomous-runtime";
 import { getNetworkSnapshot } from "@/lib/network-snapshot";
 import { getRouteScores } from "@/lib/action-engine";
@@ -76,9 +76,9 @@ export async function POST(request: NextRequest) {
       }
       setExecutionMode(mode);
       if (mode !== "observe") {
-        startSyntheticEventLoop();
+        startLiveEventLoop();
       } else {
-        stopSyntheticEventLoop();
+        stopLiveEventLoop();
       }
       return NextResponse.json({ ok: true, mode });
     }
@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
     case "inject_fault": {
       const faultType = body.faultType as FaultType;
       const validFaults: FaultType[] = [
-        "expired_blockhash", "low_tip", "zero_tip",
-        "rpc_failure", "stream_disconnect", "rate_limit", "simulation_failure",
+        "expired_blockhash", "low_tip", "zero_tip", "simulation_failure",
       ];
       if (!validFaults.includes(faultType)) {
         return NextResponse.json({ error: "invalid fault type" }, { status: 400 });
@@ -110,13 +109,13 @@ export async function POST(request: NextRequest) {
     }
 
     case "start_events": {
-      const interval = typeof body.intervalMs === "number" ? body.intervalMs : 8000;
-      startSyntheticEventLoop(interval);
+      const interval = typeof body.intervalMs === "number" ? body.intervalMs : 2000;
+      startLiveEventLoop(interval);
       return NextResponse.json({ ok: true });
     }
 
     case "stop_events": {
-      stopSyntheticEventLoop();
+      stopLiveEventLoop();
       return NextResponse.json({ ok: true });
     }
 

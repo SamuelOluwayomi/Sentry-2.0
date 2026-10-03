@@ -377,9 +377,6 @@ type FaultType =
   | "expired_blockhash"
   | "low_tip"
   | "zero_tip"
-  | "rpc_failure"
-  | "stream_disconnect"
-  | "rate_limit"
   | "simulation_failure";
 
 type SentryEvent = {
@@ -720,7 +717,7 @@ function AutonomousSection() {
             <div className="flex-1 overflow-y-auto space-y-2 max-h-[380px] pr-1">
               {liveEvents.length === 0 ? (
                 <p className="font-sans text-xs text-[#5A564F] italic pt-2">
-                  Waiting for Blur or Yellowstone events. Set mode to Shadow or Live to start synthetic event loop.
+                  Waiting for Blur or Yellowstone events. Set mode to Shadow or Live to start the live block scanner.
                 </p>
               ) : (
                 liveEvents.map((evt) => (
@@ -732,7 +729,7 @@ function AutonomousSection() {
                       <span className={`font-mono text-xs font-bold uppercase px-1.5 py-0.5 rounded border ${
                         evt.source === "blur"
                           ? "border-blue-300 bg-blue-50 text-blue-800"
-                          : evt.source === "synthetic"
+                          : evt.source === "operator"
                             ? "border-amber-300 bg-amber-50 text-amber-800"
                             : "border-purple-300 bg-purple-50 text-purple-800"
                       }`}>
@@ -1105,18 +1102,15 @@ function AutonomousSection() {
               Fault Injection
             </h3>
             <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
-              Inject classified failure conditions. Sentry detects, classifies, and recovers. Each run generates a full execution receipt.
+              Sends real transactions (LIVE mode required) that fail on the live network. Sentry classifies the real error and recovers. Each run generates a full execution receipt.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
             {([
               { type: "expired_blockhash" as const, label: "Expired Blockhash" },
               { type: "low_tip" as const, label: "Low Tip" },
               { type: "zero_tip" as const, label: "Zero Tip" },
-              { type: "rpc_failure" as const, label: "RPC Failure" },
-              { type: "stream_disconnect" as const, label: "Stream Drop" },
-              { type: "rate_limit" as const, label: "Rate Limit" },
               { type: "simulation_failure" as const, label: "Sim Failure" },
             ] as const).map((f) => (
               <button

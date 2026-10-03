@@ -13,6 +13,7 @@ import type {
   ExecutionMode,
 } from "./types";
 import { scoreOpportunity } from "./event-engine";
+import { liveDeduplicator } from "./cuckoo-filter";
 
 // -- Default Policy Rules (overridable via API) --
 const DEFAULT_RULES: PolicyRule[] = [
@@ -20,7 +21,7 @@ const DEFAULT_RULES: PolicyRule[] = [
     id: "blur-liquidity",
     name: "Blur Liquidity Change",
     enabled: true,
-    eventTypes: ["liquidity_change", "pool_created"],
+    eventTypes: ["liquidity_change", "pool_creation"],
     conditions: {
       minLiquidityDeltaUsd: 5_000,
       maxCongestionScore: 80,
@@ -60,13 +61,30 @@ const DEFAULT_RULES: PolicyRule[] = [
     conditions: {
       minLiquidityDeltaUsd: 0,
       maxCongestionScore: 85,
-      minOpportunityScore: 60,
+      minOpportunityScore: 55,
     },
     limits: {
       maxTipLamports: 50_000,
       maxRetriesPerEvent: 1,
       maxExecutionsPerMinute: 3,
       maxDailySpendSol: 0.2,
+    },
+    route: "beam",
+  },
+  {
+    id: "operator-fault",
+    name: "Operator Fault Test",
+    enabled: true,
+    eventTypes: ["fault_injection"],
+    conditions: {
+      maxCongestionScore: 100,
+      minOpportunityScore: 0,
+    },
+    limits: {
+      maxTipLamports: 50_000,
+      maxRetriesPerEvent: 2,
+      maxExecutionsPerMinute: 6,
+      maxDailySpendSol: 0.01,
     },
     route: "beam",
   },
@@ -223,6 +241,22 @@ export function evaluatePolicy(
       blockReason: "execution_mode_observe",
       passedChecks: [],
       failedChecks: ["Execution mode is OBSERVE"],
+      recommendedTip: network.tipP75,
+      recommendedRoute: "beam",
+      opportunityScore: 0,
+      maxTip: 0,
+      circuitBreakerState: checkCircuitBreaker(),
+    };
+  }
+
+  // Cuckoo-filter duplicate suppression (O(1), runs before any other work)
+  const dedupKey = `policy:${event.decoded.signature ?? event.id}`;
+  if (liveDeduplicator.checkAndRecord(dedupKey, network.slot)) {
+    return {
+      decision: "blocked",
+      blockReason: "duplicate_suppressed",
+      passedChecks,
+      failedChecks: [`Duplicate event suppressed by Cuckoo filter: ${dedupKey}`],
       recommendedTip: network.tipP75,
       recommendedRoute: "beam",
       opportunityScore: 0,

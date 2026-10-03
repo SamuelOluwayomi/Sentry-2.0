@@ -1,7 +1,7 @@
 // Sentry 2.0 -- Shared Type Definitions
 // The single source of truth for all cross-layer data shapes.
 
-export type EventSource = "yellowstone" | "blur" | "rpc" | "synthetic";
+export type EventSource = "yellowstone" | "blur" | "rpc" | "operator";
 
 export type EventType =
   | "swap"
@@ -84,7 +84,8 @@ export type BlockReason =
   | "policy_not_matched"
   | "wallet_balance_insufficient"
   | "execution_mode_shadow"
-  | "execution_mode_observe";
+  | "execution_mode_observe"
+  | "duplicate_suppressed";
 
 export type PolicyEvaluation = {
   decision: PolicyDecision;
@@ -201,9 +202,6 @@ export type FaultType =
   | "expired_blockhash"
   | "low_tip"
   | "zero_tip"
-  | "rpc_failure"
-  | "stream_disconnect"
-  | "rate_limit"
   | "simulation_failure";
 
 export type CircuitBreakerState = "closed" | "open" | "half_open";

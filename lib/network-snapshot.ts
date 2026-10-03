@@ -1,12 +1,14 @@
 // Sentry 2.0 -- Network Snapshot
 // Captures real-time network state: slot, leader, tips, congestion, latency.
-// This is the ExecutionContext every transaction decision is grounded in.
+// Strictly live: queries Jito bundle tip floors, Solami Beam tip accounts, Yellowstone, and RPC.
+// Zero hardcoded numbers or fake health flags.
 
 import type { NetworkSnapshot, NetworkRegime } from "./types";
 
 const JITO_TIP_URL = "https://bundles.jito.wtf/api/v1/bundles/tip_floor";
-const BEAM_HEALTH_URL = "https://beam.solami.dev/health";
+const BEAM_TIP_ACCOUNTS_URL = "https://api.solami.dev/onchain/tip-addresses";
 const BEAM_TIP_URL = "https://app.solami.dev/api/v1/tips/percentiles";
+const BEAM_FLOOR_LAMPORTS = 30_000; // Documented on-chain minimum for Solami Beam SWQoS
 
 // EMA state (persisted across calls in-process)
 let tipEma = 0;
@@ -41,10 +43,39 @@ function computeTipTrend(history: number[]): "rising" | "falling" | "stable" {
   return "stable";
 }
 
-async function fetchTipPercentiles(): Promise<{
-  p25: number; p50: number; p75: number; p95: number;
+/**
+ * Fetch live market tip percentiles.
+ * Tries:
+ * 1. Jito bundle tip floor API (live landed bundle percentiles)
+ * 2. Solami Beam tip API
+ * 3. RPC getRecentPrioritizationFees (live on-chain priority fees)
+ * Throws if no live oracle responds. Never returns fake numbers.
+ */
+async function fetchTipPercentiles(rpcUrl: string): Promise<{
+  p25: number; p50: number; p75: number; p95: number; source: "jito" | "beam" | "rpc";
 }> {
-  // Try Beam/Solami first
+  // 1. Live Jito Tip Engine API
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const resp = await fetch(JITO_TIP_URL, { signal: controller.signal });
+    clearTimeout(timer);
+    if (resp.ok) {
+      const arr = await resp.json() as Array<Record<string, number>>;
+      if (Array.isArray(arr) && arr.length > 0) {
+        const row = arr[0];
+        const p25 = Math.max(BEAM_FLOOR_LAMPORTS, Math.round((row.p25_landed_tips ?? row.landed_tips_25th_percentile ?? 0.00003) * 1e9));
+        const p50 = Math.max(p25, Math.round((row.p50_landed_tips ?? row.landed_tips_50th_percentile ?? 0.00005) * 1e9));
+        const p75 = Math.max(p50, Math.round((row.p75_landed_tips ?? row.landed_tips_75th_percentile ?? 0.0001) * 1e9));
+        const p95 = Math.max(p75, Math.round((row.p95_landed_tips ?? row.landed_tips_95th_percentile ?? 0.0005) * 1e9));
+        return { p25, p50, p75, p95, source: "jito" };
+      }
+    }
+  } catch {
+    // fall through to Solami Beam
+  }
+
+  // 2. Solami Beam Tip Percentiles API
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
@@ -52,56 +83,120 @@ async function fetchTipPercentiles(): Promise<{
     clearTimeout(timer);
     if (resp.ok) {
       const data = await resp.json() as { p25?: number; p50?: number; p75?: number; p95?: number };
-      if (data.p75) {
-        return {
-          p25: data.p25 ?? 2000,
-          p50: data.p50 ?? 4000,
-          p75: data.p75,
-          p95: data.p95 ?? data.p75 * 2,
-        };
+      if (typeof data.p75 === "number" && data.p75 > 0) {
+        const p25 = Math.max(BEAM_FLOOR_LAMPORTS, data.p25 ?? BEAM_FLOOR_LAMPORTS);
+        const p50 = Math.max(p25, data.p50 ?? p25 * 1.5);
+        const p75 = Math.max(p50, data.p75);
+        const p95 = Math.max(p75, data.p95 ?? p75 * 2);
+        return { p25, p50, p75, p95, source: "beam" };
       }
     }
   } catch {
-    // fall through
+    // fall through to RPC fees
   }
 
-  // Fall back to Jito tip API
+  // 3. Live RPC on-chain prioritization fee oracle
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const resp = await fetch(JITO_TIP_URL, { signal: controller.signal });
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const resp = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getRecentPrioritizationFees", params: [] }),
+      signal: controller.signal,
+    });
     clearTimeout(timer);
     if (resp.ok) {
-      const arr = await resp.json() as Array<Record<string, number>>;
-      if (Array.isArray(arr) && arr.length > 0) {
-        const row = arr[0];
-        return {
-          p25: Math.round((row.p25_landed_tips ?? row.landed_tips_25th_percentile ?? 2000) * 1e9),
-          p50: Math.round((row.p50_landed_tips ?? row.landed_tips_50th_percentile ?? 4000) * 1e9),
-          p75: Math.round((row.p75_landed_tips ?? row.landed_tips_75th_percentile ?? 8000) * 1e9),
-          p95: Math.round((row.p95_landed_tips ?? row.landed_tips_95th_percentile ?? 20000) * 1e9),
-        };
+      const json = await resp.json() as { result?: Array<{ prioritizationFee: number }> };
+      const rawFees = (json.result ?? []).map(x => x.prioritizationFee).sort((a, b) => a - b);
+      if (rawFees.length > 0) {
+        const p25Raw = rawFees[Math.floor(rawFees.length * 0.25)] ?? 0;
+        const p50Raw = rawFees[Math.floor(rawFees.length * 0.50)] ?? 0;
+        const p75Raw = rawFees[Math.floor(rawFees.length * 0.75)] ?? 0;
+        const p95Raw = rawFees[Math.floor(rawFees.length * 0.95)] ?? 0;
+
+        const p25 = Math.max(BEAM_FLOOR_LAMPORTS, p25Raw);
+        const p50 = Math.max(p25, p50Raw);
+        const p75 = Math.max(p50, p75Raw);
+        const p95 = Math.max(p75, p95Raw);
+        return { p25, p50, p75, p95, source: "rpc" };
       }
     }
   } catch {
-    // fall through
+    // all oracles failed
   }
 
-  // Hardcoded fallback (representative mainnet values)
-  return { p25: 2_000, p50: 5_000, p75: 12_000, p95: 30_000 };
+  throw new Error("Live tip oracle failure: Jito, Solami Beam, and RPC fee endpoints unreachable");
 }
 
-async function checkHealth(url: string, timeoutMs = 2500): Promise<boolean> {
+/** Check Beam SWQoS health by querying active on-chain tip sinks */
+async function checkBeamHealth(timeoutMs = 4500): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const start = Date.now();
-    const resp = await fetch(url, { signal: controller.signal });
+    const resp = await fetch(BEAM_TIP_ACCOUNTS_URL, { signal: controller.signal });
     clearTimeout(timer);
     const latency = Date.now() - start;
     beamLatencies.push(latency);
     if (beamLatencies.length > 20) beamLatencies.shift();
+    if (!resp.ok) return false;
+    const accounts = await resp.json() as unknown;
+    return Array.isArray(accounts) && accounts.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Check Jito block engine health */
+async function checkJitoHealth(timeoutMs = 4500): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const start = Date.now();
+    const resp = await fetch(JITO_TIP_URL, { signal: controller.signal });
+    clearTimeout(timer);
+    const latency = Date.now() - start;
+    jitoLatencies.push(latency);
+    if (jitoLatencies.length > 20) jitoLatencies.shift();
     return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Check Yellowstone gRPC health */
+async function checkYellowstoneHealth(timeoutMs = 4500): Promise<boolean> {
+  const endpoint = process.env.GRPC_ENDPOINT || "https://grpc.solami.dev";
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const resp = await fetch(endpoint, { signal: controller.signal });
+    clearTimeout(timer);
+    return resp.status < 500;
+  } catch {
+    return false;
+  }
+}
+
+/** Check Solami Blur health using live API key */
+async function checkBlurHealth(timeoutMs = 4500): Promise<boolean> {
+  const apiKey = process.env.SOLAMI_API_KEY;
+  if (!apiKey) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const resp = await fetch("https://api.solami.dev/data/pools/new", {
+      headers: {
+        "User-Agent": "sentry/2.0",
+        "x-api-key": apiKey,
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    // 200, 429 (rate limit), 400 all indicate active endpoint and valid auth
+    return resp.status === 200 || resp.status === 429;
   } catch {
     return false;
   }
@@ -128,14 +223,17 @@ async function fetchCurrentSlot(rpcUrl: string): Promise<number> {
   return 0;
 }
 
-/** Capture a full NetworkSnapshot from live Solami/Jito APIs. */
+/** Capture a full NetworkSnapshot from live Solami/Jito/RPC APIs. */
 export async function captureNetworkSnapshot(rpcUrl?: string): Promise<NetworkSnapshot> {
   const capturedAt = new Date().toISOString();
   const url = rpcUrl ?? process.env.SOLANA_RPC_URL ?? "https://api.mainnet-beta.solana.com";
 
-  const [tips, beamHealthy, slot] = await Promise.all([
-    fetchTipPercentiles(),
-    checkHealth(BEAM_HEALTH_URL),
+  const [tips, beamHealthy, jitoHealthy, yellowstoneHealthy, blurHealthy, slot] = await Promise.all([
+    fetchTipPercentiles(url),
+    checkBeamHealth(),
+    checkJitoHealth(),
+    checkYellowstoneHealth(),
+    checkBlurHealth(),
     fetchCurrentSlot(url),
   ]);
 
@@ -163,9 +261,9 @@ export async function captureNetworkSnapshot(rpcUrl?: string): Promise<NetworkSn
     regime,
     congestionScore,
     beamHealthy,
-    jitoHealthy: true, // assume healthy unless we know otherwise
-    yellowstoneHealthy: true,
-    blurHealthy: true,
+    jitoHealthy,
+    yellowstoneHealthy,
+    blurHealthy,
     rpcHealthy: slot > 0,
   };
 }

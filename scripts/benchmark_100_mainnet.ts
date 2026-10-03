@@ -1,3 +1,4 @@
+import { liveDeduplicator } from "../lib/cuckoo-filter";
 import {
   Connection, Keypair, PublicKey, SystemProgram,
   Transaction, TransactionInstruction
@@ -1061,6 +1062,12 @@ async function broadcastWithFault(
   if (faultType === "duplicate_tx") {
     if (rawTxCache.length > 0) {
       const cached = rawTxCache[Math.floor(Math.random() * rawTxCache.length)];
+      // Cuckoo preflight: suppress locally if signature is still inside its 150-slot window
+      const dupSlot = await conn.getSlot("confirmed");
+      if (liveDeduplicator.checkAndRecord(`bench:${cached.sig}`, dupSlot) ) {
+        console.log(`  [SUPPRESSED] run ${runNumber} duplicate blocked by Cuckoo filter`);
+        return { signature: null, status: "failed", failureClass: "duplicate_suppressed_cuckoo" };
+      }
       try {
         await conn.sendRawTransaction(cached.rawTx, { skipPreflight: false });
         return { signature: cached.sig, status: "failed", failureClass: "duplicate_tx_slipped_through" };
