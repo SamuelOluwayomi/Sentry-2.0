@@ -18,7 +18,10 @@
     "benchmark:mainnet": "jiti scripts/benchmark_100_mainnet.ts",
     "check:live": "jiti scripts/check_live.ts",
     "monitor": "jiti scripts/monitor_live.ts",
-    "tape": "jiti scripts/monitor_live.ts"
+    "tape": "jiti scripts/monitor_live.ts",
+    "docs": "npm --prefix docs run dev",
+    "docs:dev": "npm --prefix docs run dev",
+    "docs:build": "npm --prefix docs run build"
   },
   "description": "Next.js, Tailwind, @solana/react-hooks",
   "keywords": [
