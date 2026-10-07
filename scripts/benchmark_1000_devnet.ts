@@ -9270,15 +9270,13 @@ async function broadcastWithFault(
   const nonce = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const memo = `Sentry2.0|run=${runNumber}|scenario=${scenarioId}|tip=${tipLamports}|nonce=${nonce}|fault=${faultType}`;
 
-  // ── 1. Policy abort: circuit breaker fires before any tx is constructed ──────
+  // ── 1. Policy abort: circuit breaker fires before any tx is constructed 
   if (faultType === "policy_abort") {
     console.log(`  [ABORT] run ${runNumber} ${scenarioId} — circuit_open`);
     return { signature: null, status: "aborted", failureClass: "circuit_open" };
   }
 
-  // ── 2. Expired blockhash: use a randomly generated 32-byte hash ───────────
-  //    This hash has never been a real Solana blockhash, so the RPC will
-  //    return a real BlockhashNotFound error, not a simulated one.
+  // ── 2. Expired blockhash: use a randomly generated 32-byte hash 
   if (faultType === "expired_blockhash") {
     try {
       const { randomBytes } = await import("node:crypto");
@@ -9336,7 +9334,7 @@ async function broadcastWithFault(
       const cached = rawTxCache[Math.floor(Math.random() * rawTxCache.length)];
       // Cuckoo preflight: suppress locally if signature is still inside its 150-slot window
       const dupSlot = await conn.getSlot("confirmed");
-      if (liveDeduplicator.checkAndRecord(`bench:${cached.sig}`, dupSlot) ) {
+      if (liveDeduplicator.checkAndRecord(`bench:${cached.sig}`, dupSlot)) {
         console.log(`  [SUPPRESSED] run ${runNumber} duplicate blocked by Cuckoo filter`);
         return { signature: null, status: "failed", failureClass: "duplicate_suppressed_cuckoo" };
       }

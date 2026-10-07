@@ -8,6 +8,7 @@ import path from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
+import nacl from "tweetnacl";
 import type {
   ExecutionReceipt, SentryEvent, NetworkSnapshot,
   PolicyEvaluation, TipRecommendation, AiRecommendation,
@@ -160,8 +161,7 @@ export function advanceLifecycle(
   if (keypair) {
     try {
       const msgBytes = Buffer.from(receipt.receiptHash, "hex");
-      const { sign } = require("tweetnacl");
-      const sig = sign.detached(msgBytes, keypair.secretKey);
+      const sig = nacl.sign.detached(msgBytes, keypair.secretKey);
       receipt.engineSignature = bs58.encode(sig);
       receipt.signerPublicKey = keypair.publicKey.toBase58();
     } catch {
@@ -195,8 +195,7 @@ export function attachAction(receipt: ExecutionReceipt, action: ActionResult): E
   if (keypair) {
     try {
       const msgBytes = Buffer.from(receipt.receiptHash, "hex");
-      const { sign } = require("tweetnacl");
-      const sig = sign.detached(msgBytes, keypair.secretKey);
+      const sig = nacl.sign.detached(msgBytes, keypair.secretKey);
       receipt.engineSignature = bs58.encode(sig);
       receipt.signerPublicKey = keypair.publicKey.toBase58();
     } catch {
@@ -239,8 +238,7 @@ export function verifyReceipt(receipt: ExecutionReceipt): {
       const msgBytes = Buffer.from(receipt.receiptHash, "hex");
       const sigBytes = bs58.decode(receipt.engineSignature);
       const pubkeyBytes = bs58.decode(receipt.signerPublicKey);
-      const { sign } = require("tweetnacl");
-      signatureValid = sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
+      signatureValid = nacl.sign.detached.verify(msgBytes, sigBytes, pubkeyBytes);
     } catch {
       signatureValid = false;
     }
