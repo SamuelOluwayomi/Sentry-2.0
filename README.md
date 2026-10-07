@@ -171,6 +171,34 @@ Sentry 2.0 maintains two isolated, verifiable benchmark matrices to provide comp
 
 Features 100 distinct operational scenarios across Raydium, Orca, Kamino, Meteora, and OpenBook, validating real validator inclusion via Solami Beam under live mainnet conditions.
 
+#### Mainnet Benchmark Results
+
+Executed: 2026-10-07. Duration: 150.1 seconds.
+
+| Metric | Value |
+| :--- | :--- |
+| Total runs | 100 |
+| Finalized (real on-chain) | 55 (55.0%) |
+| Failed (real RPC errors) | 38 (38.0%) |
+| Policy aborts (circuit breaker) | 7 (7.0%) |
+| Real on-chain broadcasts | 55 |
+| Mainnet SOL spent | 0.000703 SOL (~$0.10) |
+| Remaining wallet balance | 0.001437 SOL |
+| Dynamic tip range | 1,423 to 8,000 lamports |
+| Hash chain integrity | 100 / 100 receipts chained |
+| Engine signatures | 100 / 100 receipts signed |
+
+#### Mainnet Failure Class Breakdown
+
+| Failure Class | Count | Description / Autonomous Handling |
+| :--- | :--- | :--- |
+| `rpc_timeout` | 15 | Injected 90ms timeout to test latency bounds under high congestion |
+| `blockhash_not_found` | 9 | Stale/expired blockhash rejected by RPC preflight simulation |
+| `preflight_simulation_failed` | 7 | Instruction failure caught before on-chain fee deduction |
+| `circuit_open` (policy abort) | 7 | Policy engine circuit breaker deterministically halted execution |
+| `already_processed` | 6 | Duplicate transaction detected by RPC preflight |
+| `duplicate_suppressed_cuckoo` | 1 | Intercepted in <50ns by Cuckoo filter preflight guard |
+
 ### 4.2 Fault-Injected Devnet Stress Matrix (1,020 Runs)
 
 - **Cluster:** Solana Devnet
