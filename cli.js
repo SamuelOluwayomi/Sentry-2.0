@@ -28,6 +28,7 @@ const colors = {
 };
 
 const projectRoot = __dirname;
+const solami = require("./scripts/cli-solami");
 
 // ---------------------------------------------------------------------------
 // Config & Env Loader
@@ -95,12 +96,18 @@ function printHeader() {
 function showHelp() {
   printHeader();
   console.log(`${colors.bold}Usage:${colors.reset} sentry <command> [options]`);
+  console.log("\nSolami Live Infrastructure Commands:");
+  console.log(`  ${colors.green}status${colors.reset}                   Solami RPC slot, cluster, Beam tip accounts, wallet headroom, ledger summaries`);
+  console.log(`  ${colors.green}check${colors.reset}                    5-second live diagnostic (RPC, Beam, wallet, signing)`);
+  console.log(`  ${colors.green}monitor${colors.reset}                  Stream live slots and Beam tip conditions`);
+  console.log(`  ${colors.green}benchmark <net> [--yes]${colors.reset}  Run the mainnet (100, needs --yes, spends SOL) or devnet (1,020) matrix`);
+  console.log(`  ${colors.green}replay <N> [--mainnet]${colors.reset}   Replay a run from the benchmark ledger`);
+  console.log(`  ${colors.green}ledger [mainnet|devnet]${colors.reset}  Recompute receipt hash chains and HMAC signatures`);
+  console.log(`  ${colors.green}verify <signature>${colors.reset}       On-chain lookup + ledger cross-reference + Beam tip detection`);
   console.log("\nStatus/Inspection Commands:");
-  console.log(`  ${colors.green}status${colors.reset}                   Print real-time pipeline state (slot, balance, runs, decisions)`);
   console.log(`  ${colors.green}evidence${colors.reset}                 Generate a judge-ready markdown report (evidence.md)`);
   console.log(`  ${colors.green}ask [query]${colors.reset}              Ask the AI agent a question or open an interactive chat session`);
   console.log(`  ${colors.green}analyze${colors.reset}                 Generate an autonomous system diagnostic audit report`);
-  console.log(`  ${colors.green}verify <signature>${colors.reset}     Audit transaction slot, fee, and memos directly on-chain via RPC`);
   console.log("\nDaemon Run & Testing Commands:");
   console.log(`  ${colors.green}run [--count <N>]${colors.reset}       Start all 3 services concurrently (optional loop count limit)`);
   console.log(`  ${colors.green}fail-test <type>${colors.reset}         Inject failure run to verify AI classification ('zero-tip' | 'expired-hash')`);
@@ -120,114 +127,6 @@ function showHelp() {
 // ---------------------------------------------------------------------------
 
 // 1. Status Command
-async function runStatus() {
-  printHeader();
-
-  // Resolve paths
-  const logPath = process.env.LIFECYCLE_LOG_PATH || path.join(projectRoot, "engine", "lifecycle_log.jsonl");
-  const decisionsPath = process.env.AGENT_DECISIONS_PATH || path.join(projectRoot, "agent_decisions.jsonl");
-
-  console.log(`${colors.bold}Pipeline Configuration:${colors.reset}`);
-  console.log(`- Solana RPC: ${process.env.SOLANA_RPC_URL || "Not set"}`);
-  console.log(`- Jito Engine: ${process.env.JITO_BLOCK_ENGINE_URL || "Not set"}`);
-  console.log(`- Yellowstone: ${process.env.YELLOWSTONE_ENDPOINT || "Not set"}`);
-  console.log(`- Logs Path: ${logPath}`);
-  console.log(`- Decisions Path: ${decisionsPath}\n`);
-
-  // Query Solana status (if RPC set)
-  if (process.env.SOLANA_RPC_URL) {
-    try {
-      const slotResp = await fetch(process.env.SOLANA_RPC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getSlot", params: [] })
-      });
-      const slotJson = await slotResp.json();
-      console.log(`- Live Network Slot: ${colors.green}${slotJson.result}${colors.reset}`);
-    } catch (e) {
-      console.log(`- Live Network Slot: ${colors.red}Unavailable (RPC Error)${colors.reset}`);
-    }
-
-    if (process.env.WALLET_PRIVATE_KEY) {
-      try {
-        let pubkey = "Unknown";
-        try {
-          const { Keypair } = require("@solana/web3.js");
-          const walletBytes = Uint8Array.from(JSON.parse(process.env.WALLET_PRIVATE_KEY));
-          pubkey = Keypair.fromSecretKey(walletBytes).publicKey.toBase58();
-        } catch { }
-
-        if (pubkey !== "Unknown") {
-          const balResp = await fetch(process.env.SOLANA_RPC_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [pubkey] })
-          });
-          const balJson = await balResp.json();
-          const sol = (balJson.result?.value ?? 0) / 1e9;
-          console.log(`- Wallet: ${colors.cyan}${pubkey}${colors.reset}`);
-          console.log(`- Wallet Balance: ${colors.green}${sol.toFixed(4)} SOL${colors.reset}\n`);
-        }
-      } catch { }
-    }
-  }
-
-  // Parse lifecycle log
-  console.log(`${colors.bold}Recent Bundle Submissions:${colors.reset}`);
-  if (fs.existsSync(logPath)) {
-    const runs = fs.readFileSync(logPath, "utf8")
-      .split(/\n/)
-      .filter(Boolean)
-      .map(line => JSON.parse(line));
-
-    if (runs.length === 0) {
-      console.log("  No bundle runs found in lifecycle log.");
-    } else {
-      console.log(`  Total Recorded Runs: ${runs.length}`);
-      console.log(`  -------------------------------------------------------------------------------------------------------------------`);
-      console.log(`  Run | Status    | Tip (lamports) | Submit Slot | Landed Slot | Proc->Conf | Confirmation Source`);
-      console.log(`  -------------------------------------------------------------------------------------------------------------------`);
-
-      runs.slice(-5).reverse().forEach(run => {
-        const statusColor = run.status === "Landed" ? colors.green : run.status === "Failed" || run.status === "Invalid" ? colors.red : colors.yellow;
-        const procToConf = (run.processed_at && run.confirmed_at)
-          ? `${new Date(run.confirmed_at).getTime() - new Date(run.processed_at).getTime()}ms`
-          : "--";
-
-        console.log(`  ${String(run.run_number).padEnd(3)} | ${statusColor}${run.status.padEnd(9)}${colors.reset} | ${String(run.tip_lamports).padEnd(14)} | ${String(run.submit_slot ?? "--").padEnd(11)} | ${String(run.landed_slot ?? "--").padEnd(11)} | ${procToConf.padEnd(10)} | ${run.confirmation_source ?? "N/A"}`);
-      });
-      console.log(`  -------------------------------------------------------------------------------------------------------------------`);
-    }
-  } else {
-    console.log(`  No lifecycle logs found at ${logPath}`);
-  }
-
-  // Parse decisions log
-  console.log(`\n${colors.bold}Latest AI Agent Decisions:${colors.reset}`);
-  if (fs.existsSync(decisionsPath)) {
-    const decisions = fs.readFileSync(decisionsPath, "utf8")
-      .split(/\n/)
-      .filter(Boolean)
-      .map(line => JSON.parse(line));
-
-    if (decisions.length === 0) {
-      console.log("  No decisions found.");
-    } else {
-      const d = decisions[decisions.length - 1];
-      const actionColor = d.action === "hold" ? colors.red : d.action === "retry" ? colors.yellow : colors.green;
-      console.log(`  - Time: ${d.created_at}`);
-      console.log(`  - Model: ${colors.dim}${d.model}${colors.reset}`);
-      console.log(`  - Action: ${actionColor}${d.action.toUpperCase()}${colors.reset} (Confidence: ${(d.confidence * 100).toFixed(0)}%)`);
-      console.log(`  - Recommended Tip: ${colors.green}${d.recommended_tip_lamports} lamports${colors.reset}`);
-      console.log(`  - Reasoning: ${d.reason}`);
-      console.log(`  - Observed Risk: ${d.observed_risk}`);
-    }
-  } else {
-    console.log(`  No agent decisions found at ${decisionsPath}`);
-  }
-  console.log("");
-}
-
 // Helper to calculate deterministic statistics from logs
 function calculateStats(runs) {
   const landed = runs.filter(r => r.status === "Landed");
@@ -722,90 +621,6 @@ function runFailTest(type) {
   });
 }
 
-// 8. Verify Command
-async function runVerify(signature) {
-  if (!signature) {
-    console.error(`${colors.red}Error: Please provide a transaction signature to verify.${colors.reset}`);
-    console.log(`Usage: sentry verify <signature>`);
-    return;
-  }
-  const rpcUrl = process.env.SOLANA_RPC_URL;
-  if (!rpcUrl) {
-    console.error(`${colors.red}Error: SOLANA_RPC_URL is not set in .env.${colors.reset}`);
-    return;
-  }
-  console.log(`Verifying transaction on-chain: ${colors.cyan}${signature}${colors.reset}`);
-  console.log(`RPC Endpoint: ${rpcUrl}\n`);
-
-  try {
-    const resp = await fetch(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "getTransaction",
-        params: [
-          signature,
-          {
-            encoding: "json",
-            maxSupportedTransactionVersion: 0
-          }
-        ]
-      })
-    });
-    const json = await resp.json();
-    if (json.error) {
-      throw new Error(json.error.message || JSON.stringify(json.error));
-    }
-    const tx = json.result;
-    if (!tx) {
-      console.log(`${colors.red}Transaction not found on-chain.${colors.reset}`);
-      console.log(`If you recently submitted, it might take a few slots to finalize or it might have failed/expired.`);
-      return;
-    }
-
-    console.log(`${colors.green}${colors.bold}Transaction Verified On-Chain!${colors.reset}\n`);
-    console.log(`- Slot: ${colors.green}${tx.slot}${colors.reset}`);
-
-    const blockTime = tx.blockTime;
-    if (blockTime) {
-      console.log(`- Landed Time: ${new Date(blockTime * 1000).toISOString()}`);
-    }
-
-    const fee = tx.meta?.fee;
-    if (fee !== undefined) {
-      console.log(`- Fee: ${colors.yellow}${fee} lamports${colors.reset} (${(fee / 1e9).toFixed(9)} SOL)`);
-    }
-
-    // Extract memos
-    const logMessages = tx.meta?.logMessages || [];
-    const memos = [];
-    logMessages.forEach(msg => {
-      if (msg.includes("Program log: ")) {
-        memos.push(msg.replace("Program log: ", "").trim());
-      }
-    });
-
-    if (memos.length > 0) {
-      console.log(`- Memo Data: "${colors.cyan}${memos.join(" | ")}${colors.reset}"`);
-    } else {
-      console.log(`- Memo Data: None found in logs.`);
-    }
-
-    // Status
-    const err = tx.meta?.err;
-    if (err) {
-      console.log(`- Execution Status: ${colors.red}Failed${colors.reset}`);
-      console.log(`- Error Detail: ${JSON.stringify(err)}`);
-    } else {
-      console.log(`- Execution Status: ${colors.green}Success${colors.reset}`);
-    }
-  } catch (err) {
-    console.error(`${colors.red}Failed to verify transaction: ${err.message}${colors.reset}`);
-  }
-}
-
 // Service runners
 let children = [];
 
@@ -947,11 +762,33 @@ async function dispatch(cmd, parts, isRepl = false) {
       break;
 
     case "status":
-      await runStatus();
+      printHeader();
+      await solami.runStatus();
+      break;
+
+    case "check":
+      await solami.runCheck();
+      break;
+
+    case "monitor":
+      if (isRepl) console.log(`${colors.dim}Tip: monitor streams until Ctrl+C.${colors.reset}`);
+      await solami.runMonitor();
+      break;
+
+    case "benchmark":
+      await solami.runBenchmark(parts);
+      break;
+
+    case "replay":
+      await solami.runReplay(parts);
+      break;
+
+    case "ledger":
+      solami.runLedger(parts[1]);
       break;
 
     case "evidence":
-      runEvidence();
+      solami.runEvidence();
       break;
 
     case "ask":
@@ -959,11 +796,11 @@ async function dispatch(cmd, parts, isRepl = false) {
       break;
 
     case "analyze":
-      await runAnalyze();
+      solami.runAnalyze(parts[1]);
       break;
 
     case "verify":
-      await runVerify(parts[1]);
+      await solami.runVerify(parts[1]);
       break;
 
     case "fail-test":
@@ -1026,11 +863,16 @@ async function dispatch(cmd, parts, isRepl = false) {
 function showReplMenu() {
   console.log(`
 ${colors.bold}Available commands:${colors.reset}`);
-  console.log(`  ${colors.green}status${colors.reset}               show current pipeline snapshot`);
+  console.log(`  ${colors.green}status${colors.reset}               live Solami RPC / Beam / wallet / ledger snapshot`);
+  console.log(`  ${colors.green}check${colors.reset}                5-second live infrastructure diagnostic`);
+  console.log(`  ${colors.green}monitor${colors.reset}              stream live slots and Beam tips (Ctrl+C to stop)`);
+  console.log(`  ${colors.green}benchmark <net>${colors.reset}      mainnet (needs --yes, spends SOL) | devnet`);
+  console.log(`  ${colors.green}replay <N>${colors.reset}           replay a ledger run (add --mainnet for mainnet)`);
+  console.log(`  ${colors.green}ledger [net]${colors.reset}         recompute receipt hash chains`);
   console.log(`  ${colors.green}analyze${colors.reset}              compute deterministic stats + AI insights`);
   console.log(`  ${colors.green}evidence${colors.reset}             generate judge-ready evidence.md`);
   console.log(`  ${colors.green}ask [question]${colors.reset}       ask the AI agent a free-form question`);
-  console.log(`  ${colors.green}verify <sig>${colors.reset}         verify a transaction signature on-chain`);
+  console.log(`  ${colors.green}verify <sig>${colors.reset}         on-chain lookup + ledger cross-reference`);
   console.log(`  ${colors.green}fail-test <type>${colors.reset}     inject a deliberate failure (zero-tip | expired-hash)`);
   console.log(`  ${colors.green}engine${colors.reset}               compile & run the Rust bundle engine`);
   console.log(`  ${colors.green}agent${colors.reset}                run the AI agent daemon`);
