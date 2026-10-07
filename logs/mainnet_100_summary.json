@@ -1,0 +1,31 @@
+{
+  "title": "Sentry 2.0 100-Run Fault-Injected Mainnet Benchmark Matrix",
+  "cluster": "mainnet-beta",
+  "genesisHash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+  "executedAt": "2026-10-07T07:01:59.584Z",
+  "totalRuns": 100,
+  "durationSec": "150.1",
+  "landedCount": 55,
+  "abortedCount": 7,
+  "failedCount": 38,
+  "landingRate": "55.0%",
+  "failureRate": "38.0%",
+  "realOnchainBroadcasts": 55,
+  "failureClassBreakdown": {
+    "rpc_timeout": 15,
+    "blockhash_not_found": 9,
+    "already_processed": 6,
+    "preflight_simulation_failed": 7,
+    "circuit_open": 7,
+    "duplicate_suppressed_cuckoo": 1
+  },
+  "spentSol": 0.000702504,
+  "remainingSol": 0.001436776,
+  "dynamicTipRange": {
+    "min": 1423,
+    "max": 8000
+  },
+  "cryptographicIntegrity": "100/100 hash-chained, 100/100 engine-signed",
+  "scenariosCovered": 100,
+  "matrixLogPath": "logs/mainnet_100_matrix.jsonl"
+}
