@@ -1,95 +1,94 @@
 ---
-sidebar_position: 4
+sidebar_position: 9
 ---
-# CLI & API Reference
+# CLI, SDK & REPL Reference
 
-## 5. Sentry CLI & REPL
-Sentry comes packaged with a command-line binary. Once linked globally with `npm link`, it can be run using the `sentry` command.
+## 1. Operator CLI Commands
 
-### Operator CLI Reference
-Sentry CLI supports one-shot command execution for dev scripting and automated cron tasks:
+Sentry 2.0 provides an extensive suite of command-line tools for development, automated operations, and audit verification:
 
 | Command | Description |
-|---|---|
-| `sentry run` | Launches all daemon processes concurrently (Dashboard, Engine, and Agent). Supports `--count [N]` parameter. |
-| `sentry status` | Displays live node slot, wallet balances, and summaries of recent bundle submissions. |
-| `sentry analyze` | Performs a mathematical audit of transaction logs and generates an AI operator summary. |
-| `sentry fail test [type]` | Injects deliberate transaction failures (`zero tip` or `expired blockhash`) into the logs. |
-| `sentry verify [sig]` | Audits a specific transaction signature directly on the Solana Mainnet blockchain. |
-| `sentry evidence` | Calculates latency statistics and compiles a judge-ready markdown verification report. |
-| `sentry serve` | Starts the standalone developer HTTP API server on port 3050 (`npx tsx server.ts`). |
+| :--- | :--- |
+| `npm run check:live` | 5-second diagnostic probing Solami RPC, Beam tip API, wallet rent reserve, and keypair signing. |
+| `npm run monitor` | Real-time autonomous monitor streaming live slots and dynamic Solami Beam tips. |
+| `npm run benchmark:mainnet` | Executes the 100-run live Mainnet-Beta benchmark matrix. |
+| `npm run benchmark:devnet` | Executes the 1,020-run fault-injected Devnet stress matrix. |
+| `npm run replay -- --run N [--mainnet]` | Deterministically replays any specific run from the cryptographic ledger. |
+| `npm run server` | Starts the standalone developer HTTP gateway on port 3050 (`npx tsx server.ts`). |
+| `npm run dev` | Launches the Next.js 16 Web Observatory on `localhost:3000`. |
 
-### Interactive REPL Console
-Executing `sentry` without any arguments drops the operator into a persistent shell. This prevents the command loop from closing after execution, keeping services running and allowing subsequent command invocations:
+---
+
+## 2. 5-Second Live Diagnostic (`npm run check:live`)
+
+Run this command to verify environment health against live Solana Mainnet-Beta:
 
 ```bash
-$ sentry
-  S E N T R Y
-  Advanced Infrastructure Challenge | Superteam Nigeria
+$ npm run check:live
 
-Interactive Operator Console — type 'help' for commands, 'exit' to quit
-
-sentry> status
-- Live Network Slot: 427137627
-- Wallet Balance: 0.001863 SOL
-sentry> exit
+========================================================================
+ SENTRY 2.0: 5-SECOND LIVE MAINNET DIAGNOSTIC CHECK
+========================================================================
+ Target Network:  Solana Mainnet-Beta
+ RPC Endpoint:    https://rpc.solami.dev/sol
+ Cluster Check:   Verified Mainnet-Beta (Slot 454129841)
+ Solami Beam:     https://beam.solami.dev:11000 [ONLINE]
+ Tip API:         https://api.solami.dev/onchain/tip-addresses [REACHABLE]
+ Wallet Balance:  2,139,280 lamports (0.002139 SOL)
+ Rent Floor:      650,240 lamports (SIMD-0047 protected)
+ Usable Balance:  1,489,040 lamports (0.001489 SOL)
+ Cuckoo Filter:   Active (Sub-50ns Preflight Deduplication)
+ Engine Signing:  Ed25519 (TweetNaCl) [VERIFIED]
+========================================================================
+STATUS: ALL SYSTEMS OPERATIONAL (0 ERRORS DETECTED)
 ```
 
-## 7. Next.js Dashboard API Reference
+---
 
-Sentry exposes local API endpoints inside the Next.js router. These allow external interfaces to fetch real-time infrastructure data:
+## 3. Developer REST API Reference (Port 3050)
 
-### GET `/api/observatory`
-Returns the system's operational health, wallet balance, recent runs, Jito floor percentiles, and the last decision computed by the AI agent.
+When running the standalone server (`npm run server`), Sentry exposes REST endpoints on port 3050:
 
-### GET `/api/slots/stream`
-Exposes a Server-Sent Events (SSE) connection that streams network slots and timestamps as they arrive from the Yellowstone gRPC client.
+### `GET /health`
+Returns system status, active network slot, Solami Beam endpoint status, and wallet balance.
 
-### POST `/api/submit-bundle/stream`
-Triggers the execution of a bundle on the Rust engine. It streams progress events (Preflight, Dynamic Tip Calculation, Signing, Jito Submission, Confirmation Polling) directly to the console terminal in the dashboard.
+### `POST /submit`
+Submits a raw transaction through Sentry's execution pipeline:
+```json
+{
+  "transaction": "<base64-encoded-transaction>",
+  "urgency": "high"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "signature": "2H96Sus...",
+  "slot": 454129850,
+  "rail": "solami_beam_swqos",
+  "tipLamports": 5507
+}
+```
 
 ---
 
-## 8. Developer Standalone REST API Reference (Port 3050)
+## 4. Programmatic TypeScript SDK (`lib/sentry-sdk.ts`)
 
-Sentry includes a native standalone developer HTTP gateway (run via `sentry serve` or `npm run server`) to submit transactions programmatically from any external programming language or script:
-
-### GET `/health`
-Returns system, network node, and validator stream connectivity status.
-
-### POST `/submit`
-Accepts a JSON payload to submit a transaction via the Jito execution pipeline:
-* **Body parameters**:
-  * `transaction` (string): The base64-serialized transaction.
-  * `urgency` (string, optional): One of `"low"`, `"medium"`, or `"high"`. Maps to Jito tip percentiles.
-* **Response**:
-  Returns a JSON execution receipt:
-  ```json
-  {
-    "success": true,
-    "signature": "5nK...",
-    "bundleId": "f78...",
-    "slot": 429724784
-  }
-  ```
-
----
-
-## 9. Programmatic TypeScript SDK Reference (`lib/sentry-sdk.ts`)
-
-For native Node.js and TypeScript integrations, developers can import Sentry directly to execute transactions with built-in telemetry:
+Developers can embed Sentry directly into their Node.js applications:
 
 ```typescript
 import { Sentry } from "./lib/sentry-sdk";
 
 const sentry = new Sentry();
-await sentry.start(); // Warmed up RPC & verified hot wallet balance
+await sentry.start();
 
-// Submit instructions, unsigned Transactions, or pre-signed Transactions:
-const result = await sentry.submit([instruction], { urgency: "medium" });
+// Submit instructions or transactions with automatic Beam SWQoS prioritization
+const result = await sentry.submit([swapInstruction], { urgency: "high" });
+
 if (result.success) {
-  console.log(`Landed! Slot: ${result.slot}, Signature: ${result.signature}`);
+  console.log(`Transaction Landed! Signature: ${result.signature}, Slot: ${result.slot}`);
 } else {
-  console.log(`Failed: ${result.error}`);
+  console.error(`Execution Failed: ${result.error}`);
 }
 ```

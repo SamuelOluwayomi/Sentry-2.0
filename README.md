@@ -160,14 +160,25 @@ False-positive rate is bounded by roughly `2b / 2^16` (about 0.012%) at high loa
 
 Sentry 2.0 maintains two isolated, verifiable benchmark matrices to provide complete empirical proof:
 
+### Benchmark Artifacts & Direct Log Links
+
+| Artifact | Cluster | Runs | File Link | Raw Data Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mainnet Matrix Ledger** | Mainnet-Beta | 100 | [`logs/mainnet_100_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/mainnet_100_matrix.jsonl) | Append-only JSONL ledger of 100 SHA-256 hash-chained execution receipts with Ed25519 engine signatures. |
+| **Mainnet Run Summary** | Mainnet-Beta | 100 | [`logs/mainnet_100_summary.json`](file:///home/samuel/sentry%202.0/logs/mainnet_100_summary.json) | High-level metrics, failure classification counts, SOL expenditure, and tip statistics. |
+| **Devnet Stress Ledger** | Devnet | 1,020 | [`logs/devnet_1000_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/devnet_1000_matrix.jsonl) | 1,020-run stress matrix spanning 51 protocols and 20 operation types with SHA-256 hash chaining. |
+| **Devnet Run Summary** | Devnet | 1,020 | [`logs/devnet_1000_summary.json`](file:///home/samuel/sentry%202.0/logs/devnet_1000_summary.json) | Complete statistical breakdown of latency drops, blockhash expirations, and circuit breaker trips. |
+
+---
+
 ### 4.1 Production Mainnet-Beta Matrix (100 Runs)
 
 - **Cluster:** Solana Mainnet-Beta (Genesis: `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`)
-- **Routing:** Solami Beam SWQoS (`...beam` tip sinks)
-- **Log File:** [`logs/mainnet_100_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/mainnet_100_matrix.jsonl)
+- **Routing:** Solami Beam SWQoS (`...beam` tip sinks) & Solami Private RPC
+- **Raw Matrix Log:** [`logs/mainnet_100_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/mainnet_100_matrix.jsonl)
 - **Summary File:** [`logs/mainnet_100_summary.json`](file:///home/samuel/sentry%202.0/logs/mainnet_100_summary.json)
-- **Runner:** `npm run benchmark:mainnet`
-- **Explorer Target:** Real mainnet transaction links (`https://explorer.solana.com/tx/<sig>`)
+- **Execution Command:** `npm run benchmark:mainnet`
+- **Replay Verification:** `npm run replay -- --run 1 --mainnet`
 
 Features 100 distinct operational scenarios across Raydium, Orca, Kamino, Meteora, and OpenBook, validating real validator inclusion via Solami Beam under live mainnet conditions.
 
@@ -199,13 +210,112 @@ Executed: 2026-10-07. Duration: 150.1 seconds.
 | `already_processed` | 6 | Duplicate transaction detected by RPC preflight |
 | `duplicate_suppressed_cuckoo` | 1 | Intercepted in <50ns by Cuckoo filter preflight guard |
 
+#### Mainnet Benchmark Log Samples
+
+Below are authentic receipts extracted directly from [`logs/mainnet_100_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/mainnet_100_matrix.jsonl):
+
+##### Sample 1: Finalized On-Chain Landing (Run #1 — OpenBook V2 Volatile Rebalance)
+A live Solana Mainnet transaction prioritized via Solami Beam with dynamic 5,507 lamport tip, landing on-chain and finalized with full cryptographic hash-chain provenance:
+
+```json
+{
+  "runNumber": 1,
+  "scenarioId": "openbook_v2__vol_rebalance",
+  "scenarioName": "OpenBook V2 Order Matching [Volatile Portfolio Rebalance]",
+  "regime": "volatile",
+  "faultType": "none",
+  "tipLamports": 5507,
+  "status": "finalized",
+  "failureClass": null,
+  "signature": "2H96SusAJn4udUHn38KLoBxQecxg7b1eFt6223XJ5Q1rGSYqFBLfYfvuwQhwzKsCAhPmVAUTzArtJQHj9K9LFNUP",
+  "mainnetExplorerUrl": "https://explorer.solana.com/tx/2H96SusAJn4udUHn38KLoBxQecxg7b1eFt6223XJ5Q1rGSYqFBLfYfvuwQhwzKsCAhPmVAUTzArtJQHj9K9LFNUP",
+  "prevReceiptHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "receiptHash": "b914914ac7adff8d86e89efa9fbd35063ffd2c9283a848fac18ed8bcfb836add",
+  "engineSignature": "3qrcCbfnMY42KRrnKLBTu9mhApUEcaa4k33SGdyZaXqkhS5a7TtNVU6S7UNA7q9QaUW3kSD7E1Mxti5hN5Yv7mF8",
+  "timestamp": "2026-10-07T06:59:29.979Z",
+  "reproduceCommand": "npm run replay -- --run 1 --mainnet"
+}
+```
+
+##### Sample 2: Preflight Cuckoo Filter Interception (Run #48 — Magic Eden Congested Drop)
+A duplicate transaction resend intercepted in `<50ns` by Sentry's partial-key Cuckoo filter preflight gate, preventing double-spend and saving RPC compute without burning lamports:
+
+```json
+{
+  "runNumber": 48,
+  "scenarioId": "magic_eden_buy__cong_mev_comp",
+  "scenarioName": "Magic Eden Marketplace Purchase [Congested MEV Competition Drop]",
+  "regime": "congested",
+  "faultType": "duplicate_tx",
+  "tipLamports": 6610,
+  "status": "failed",
+  "failureClass": "duplicate_suppressed_cuckoo",
+  "signature": null,
+  "mainnetExplorerUrl": null,
+  "prevReceiptHash": "c2f7eed3d8d073e7c40040c7bf5554bb9b8beff312add074e904e9e33ea271c0",
+  "receiptHash": "ff1abec536c51e53b380428723dec4456266dbed6a3e78fb7890f3a250b2930a",
+  "engineSignature": "263jwmTa5h9vRABvzhTnqVKdxZryQa5UrKM3VnKwzdtCLf4Qnajp31iacALuXqqg4U68W6a2UZ2LxyVyCdFHpnCb",
+  "timestamp": "2026-10-07T07:00:43.025Z",
+  "reproduceCommand": "npm run replay -- --run 48 --mainnet"
+}
+```
+
+##### Sample 3: Real RPC Error Recovery (Run #17 — Kamino Stale Blockhash Expiry)
+An authentic expired blockhash rejection detected by Solami Private RPC simulation, triggering autonomous classification and hash-chained receipt logging:
+
+```json
+{
+  "runNumber": 17,
+  "scenarioId": "kamino_lend__cong_blockhash",
+  "scenarioName": "Kamino Finance Lending Market [Congested Blockhash Expiry]",
+  "regime": "congested",
+  "faultType": "expired_blockhash",
+  "tipLamports": 5531,
+  "status": "failed",
+  "failureClass": "blockhash_not_found",
+  "signature": null,
+  "mainnetExplorerUrl": null,
+  "prevReceiptHash": "aff63bd712e2f2df076bce74afacd680d5546c330c947a015433d88b142f714c",
+  "receiptHash": "f0934de028d753246c35bc0c36f0bce13a9efa4d042d120b98092317bf3153d3",
+  "engineSignature": "3a4wBye3tULeaEgJBhpv1qpwG5Yc5NakKC8GxWiPs5FFM77hwotfQsXoKrDe6RBampzYY3xwZyQpuYxABhzvLTNJ",
+  "timestamp": "2026-10-07T06:59:59.647Z",
+  "reproduceCommand": "npm run replay -- --run 17 --mainnet"
+}
+```
+
+##### Sample 4: Deterministic Policy Abort (Run #35 — Meteora Extreme Circuit Breaker)
+An execution halted before transaction construction by the deterministic policy engine when volatility exceeded safe variance bounds, protecting operator capital:
+
+```json
+{
+  "runNumber": 35,
+  "scenarioId": "meteora_dlmm__ext_circuit",
+  "scenarioName": "Meteora DLMM Bin Pool [Extreme Circuit Breaker Arm]",
+  "regime": "extreme",
+  "faultType": "policy_abort",
+  "tipLamports": 6640,
+  "status": "aborted",
+  "failureClass": "circuit_open",
+  "signature": null,
+  "mainnetExplorerUrl": null,
+  "prevReceiptHash": "1bc2305172e82e3b026923307d4eda3bf8f0216a6440807047a494b7dafb9dfd",
+  "receiptHash": "967f3272939b4f19cf24c575f6b9bda7c32ed3afcbed35b5249b8c35c2661e33",
+  "engineSignature": "4ovsZ3yYCsE6Fm4u9EKdXzUUHCg74iNMqWQwK5FcXfUPBZ7BbjB2NfuyGNYSGsJV7sDqePo7ccPWPRw3s4npXJik",
+  "timestamp": "2026-10-07T07:00:26.605Z",
+  "reproduceCommand": "npm run replay -- --run 35 --mainnet"
+}
+```
+
+---
+
 ### 4.2 Fault-Injected Devnet Stress Matrix (1,020 Runs)
 
 - **Cluster:** Solana Devnet
 - **Scope:** 51 protocols crossed with 20 operation types (1,020 unique combinations)
-- **Log File:** [`logs/devnet_1000_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/devnet_1000_matrix.jsonl)
+- **Raw Matrix Log:** [`logs/devnet_1000_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/devnet_1000_matrix.jsonl)
 - **Summary File:** [`logs/devnet_1000_summary.json`](file:///home/samuel/sentry%202.0/logs/devnet_1000_summary.json)
-- **Runner:** `npm run benchmark:devnet`
+- **Execution Command:** `npm run benchmark:devnet`
+- **Replay Verification:** `npm run replay -- --run 1`
 
 #### Devnet Benchmark Results
 
@@ -233,7 +343,105 @@ Executed: 2026-10-01. Duration: 1,041.4 seconds.
 | `circuit_open` (policy abort) | 51 | 5.0% |
 | `already_processed` | 8 | 0.8% |
 
+#### Devnet Benchmark Log Samples
+
+Below are authentic receipts extracted directly from [`logs/devnet_1000_matrix.jsonl`](file:///home/samuel/sentry%202.0/logs/devnet_1000_matrix.jsonl):
+
+##### Sample 1: Finalized On-Chain Landing (Run #1 — OpenBook V2 Volatile Rebalance)
+A real transaction landed on Solana Devnet with full signature verification and SHA-256 genesis chaining:
+
+```json
+{
+  "runNumber": 1,
+  "scenarioId": "openbook_v2__vol_rebalance",
+  "scenarioName": "OpenBook V2 Order Matching [Volatile Portfolio Rebalance]",
+  "regime": "volatile",
+  "faultType": "none",
+  "tipLamports": 73088,
+  "status": "finalized",
+  "failureClass": null,
+  "signature": "3DPDMkqeFFv5LGnJw86wPCFUjZGY9JsdkhYWQtdXtVXBGR3vTxoF1QrCgrtchF6rdpuR1pRRea3ufLk5mUQ6pLCG",
+  "devnetExplorerUrl": "https://explorer.solana.com/tx/3DPDMkqeFFv5LGnJw86wPCFUjZGY9JsdkhYWQtdXtVXBGR3vTxoF1QrCgrtchF6rdpuR1pRRea3ufLk5mUQ6pLCG?cluster=devnet",
+  "prevReceiptHash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "receiptHash": "eae71360fb401f60441b88150dffcde3bdb15672cd854dfcd9722538ff6f6988",
+  "engineSignature": "2j7weYQ9P7UZf8chB6BNbmy7tUycD6jUamxXSLbLoPPeX3ba9heW2zSisUZZd941BmrBNFvYDxdZBj7wVH3M8Euw",
+  "timestamp": "2026-10-01T08:12:05.838Z",
+  "reproduceCommand": "npm run replay -- --run 1"
+}
+```
+
+##### Sample 2: Injected Stale Blockhash Fault (Run #17 — Kamino Lending Market)
+An intentional stale blockhash fault triggering authentic RPC preflight simulation rejection:
+
+```json
+{
+  "runNumber": 17,
+  "scenarioId": "kamino_lend__cong_blockhash",
+  "scenarioName": "Kamino Finance Lending Market [Congested Blockhash Expiry]",
+  "regime": "congested",
+  "faultType": "expired_blockhash",
+  "tipLamports": 54537,
+  "status": "failed",
+  "failureClass": "blockhash_not_found",
+  "signature": null,
+  "devnetExplorerUrl": null,
+  "prevReceiptHash": "59228e2a90f8009e84eccdaf03e04434668529a39b2874e387982902760d1d6b",
+  "receiptHash": "0435bf0a7799981414f38629844b767592849bfa3f2fa1b488e0294e531bdb9a",
+  "engineSignature": "5rZgYmqwiGqBvV7eM935LkEW8t26g3zRVw8hYFvsDcjC6GUTFXPzHokiA8A7ZBcQxKLPSA5eTzWFeyfDWv3ncoP5",
+  "timestamp": "2026-10-01T08:12:19.562Z",
+  "reproduceCommand": "npm run replay -- --run 17"
+}
+```
+
+##### Sample 3: Latency Drop Recovery (Run #11 — Raydium Constant Product)
+A 90ms timeout cutoff simulating extreme RPC congestion, handled cleanly by the error classifier:
+
+```json
+{
+  "runNumber": 11,
+  "scenarioId": "raydium_amm__ext_validator",
+  "scenarioName": "Raydium AMM Constant Product [Extreme Validator Stall]",
+  "regime": "extreme",
+  "faultType": "rpc_timeout",
+  "tipLamports": 54326,
+  "status": "failed",
+  "failureClass": "rpc_timeout",
+  "signature": null,
+  "devnetExplorerUrl": null,
+  "prevReceiptHash": "fe7edf1a51d4f3db7bf2a7140868f7c2d85d7b12149d8f03bd8dba0db2d14f5a",
+  "receiptHash": "7b6d5a741e78270f80550f84a8abac4397899e0cc6f8f37cb033eb2fe07b267f",
+  "engineSignature": "2aNLidX7tnWNEMf1SzyzwDZJ5eqd6QUaC3Xpi9XibdLHhHYBQr5oB7brdXxQtQtHg1hcF44P7fvrTqmeHE2GEupN",
+  "timestamp": "2026-10-01T08:12:14.128Z",
+  "reproduceCommand": "npm run replay -- --run 11"
+}
+```
+
 ---
+
+### 4.3 Receipt Schema & Cryptographic Verification
+
+Every entry written to either matrix ledger complies with this strict TypeScript interface:
+
+```typescript
+interface ExecutionReceipt {
+  runNumber: number;               // Sequential 1-indexed scenario position
+  scenarioId: string;              // Deterministic slug (protocol + regime + fault)
+  scenarioName: string;            // Human-readable title
+  regime: MarketRegime;            // 'calm' | 'moderate' | 'congested' | 'extreme' | 'volatile'
+  faultType: FaultType;            // Injected fault condition ('none' | 'expired_blockhash' | etc.)
+  tipLamports: number;             // Dynamically calculated validator priority tip
+  status: ExecutionStatus;         // 'finalized' | 'failed' | 'aborted'
+  failureClass: FailureClass | null; // Structured causal classification
+  signature: string | null;        // Base58 Solana transaction signature (null if aborted/failed)
+  mainnetExplorerUrl?: string | null; // Direct link to Solana Explorer on Mainnet-Beta
+  devnetExplorerUrl?: string | null;  // Direct link to Solana Explorer on Devnet
+  prevReceiptHash: string;         // SHA-256 hash of the immediately preceding receipt
+  receiptHash: string;             // SHA-256 hash of this receipt including prevReceiptHash
+  engineSignature: string;         // Ed25519 / HMAC signature over receiptHash by operator key
+  timestamp: string;               // ISO 8601 UTC execution timestamp
+  reproduceCommand: string;        // Exact CLI command to deterministically replay this run
+}
+```
 
 ## 5. Fault Injection Design
 

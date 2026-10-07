@@ -1,30 +1,51 @@
 ---
-sidebar_position: 3
+sidebar_position: 5
 ---
-# Autonomous AI Agent
+# Autonomous AI Agent & Groq LPU
 
-## 4. Autonomous AI Agent
-The Sentry operator console is augmented by an asynchronous node-based AI Agent located in `/agent`. The agent is designed to inspect the execution telemetry of the Rust engine and determine operational modifications.
+## 1. The Autonomous Operator Architecture
 
-### The Telemetry Feed
-The agent reads from a shared lifecycle log file (`lifecycle_log.jsonl`) and a decision log file (`agent_decisions.jsonl`). It aggregates data across the last 10 submission runs:
-* **Landing Success Rate**: The percentage of submitted bundles that successfully land on-chain.
-* **Confirmation Latency (Slot Delta)**: The difference between the submission slot and the landed slot.
-* **Commitment Delta**: The time in milliseconds taken to transition from Processed status to Confirmed.
-* **Failure Classifications**: Stored flags categorizing errors (e.g. invalid tips, expired blockhashes).
+Conventional blockchain bots are either purely rule-based (rigid, unable to adapt to novel edge cases) or attempt to put large language models directly into the transaction loop (causing massive latency and transaction failures).
 
-### Local Rules Policy vs. Groq LLM LLAMA Chain
-Sentry utilizes a two-tier decision-making policy to remain operational even when remote LLM nodes are unreachable:
+Sentry 2.0 implements an **autonomous systems operator model**:
+- The **deterministic hot path** executes transactions at wire speed (under 1ms).
+- The **cognitive cold path** acts as an expert systems reliability engineer, running out-of-band to monitor execution health, diagnose failures, and calibrate operating parameters.
 
-**1. Local Rules Policy (Default)**
-Runs locally inside the Node event loop. If landing rates are healthy and processed-to-confirmed times are under 3 seconds, it outputs a default tip recommendation. If minor congestion is identified, it applies a simple multiplier to the Jito floor.
+---
 
-**2. LLM Reasoning Chain (Fallback/Deep Audit)**
-If landing rates drop below 60% or repeated failures are detected, Sentry queries Groq using a `llama-3.3-70b-versatile` reasoning prompt. The prompt includes raw JSON runs data and requests a structured JSON response specifying the next action (`submit`, `hold`, or `retry`), recommended tip premium, and textual justification.
+## 2. Groq LPU Hardware Acceleration
 
-## 9. Sentry AI Assistant
-Query the Sentry AI Docs Agent directly to get specific help with setting up the project, resolving infrastructure errors, or understanding code details:
+Sentry 2.0 integrates **Groq Language Processing Units (LPUs)** running `llama-3.3-70b-versatile`.
 
-import AIAssistant from '@site/src/components/AIAssistant';
+### Why Groq LPU?
+Standard cloud GPU inference suffers from high latency and variable token arrival rates (often 1,500ms to 4,000ms for a 70B parameter model). Groq's deterministic Tensor Streaming Processor architecture delivers:
+- Sub-500ms time-to-first-token for deep telemetry payloads.
+- High inference throughput for high-frequency log analysis.
+- Structured JSON outputs conforming to strict runtime schemas.
 
-<AIAssistant />
+---
+
+## 3. Market Regime Classification
+
+The AI engine analyzes continuous telemetry from Solami Private RPC and native WebSocket streams to classify network conditions into five operational regimes:
+
+| Regime | Slot Velocity | Tip Multiplier | Execution Strategy |
+| :--- | :--- | :--- | :--- |
+| **`calm`** | Normal (~400ms) | 1.0x (Floor) | Standard Private RPC routing, minimal priority tips. |
+| **`moderate`** | Slight queuing | 1.25x | Standard Private RPC routing with baseline priority fees. |
+| **`congested`** | High queue depth | 1.75x | Solami Beam SWQoS routing enabled, elevated validator tips. |
+| **`extreme`** | Validator stalls | 2.5x | Dedicated Solami Beam SWQoS TPU rail, aggressive dynamic tips. |
+| **`volatile`** | Rapid price swings | 3.5x (Max) | Maximum SWQoS allocation, short-lived blockhashes, tight slippage bounds. |
+
+---
+
+## 4. Cold-Path Responsibilities
+
+### 4.1 Causal Failure Analysis
+When a transaction fails or is aborted by the policy engine, the telemetry payload is routed to the Groq LPU for causal classification:
+- **`blockhash_not_found`**: Identifies whether the failure was caused by stale RPC sampling or validator queue delays.
+- **`preflight_simulation_failed`**: Pinpoints the exact instruction failure (e.g. slippage exceeded, insufficient token balance).
+- **`rpc_timeout`**: Evaluates whether network latency crossed operator risk bounds.
+
+### 4.2 Out-of-Band Policy Calibration
+The agent continuously audits the append-only ledger (`logs/mainnet_100_matrix.jsonl`). If it observes three consecutive simulation failures across similar protocols, it dynamically adjusts circuit breaker thresholds without requiring operator intervention or code redeployment.

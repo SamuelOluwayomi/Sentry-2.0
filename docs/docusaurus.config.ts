@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Sentry Protocol Docs',
-  tagline: 'Advanced Infrastructure Challenge',
+  title: 'Sentry 2.0 Docs',
+  tagline: 'Autonomous Solana Execution Engine & Solami Infrastructure',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -71,7 +71,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'Sentry',
+      title: 'Sentry 2.0',
       logo: {
         alt: 'Sentry Protocol',
         src: 'img/Sentry-logo.png',

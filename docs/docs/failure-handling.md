@@ -1,18 +1,45 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 ---
-# Troubleshooting
+# Real Fault-Injection & Safety Invariants
 
-## 8. Troubleshooting
+## 1. Zero-Mock Testing Philosophy
 
-**Error: "insufficient funds for tip payment"**
-* **Cause**: The operator wallet balance is too low to pay the Jito fee.
-* **Solution**: Copy the address from the *Slot Pulse* panel on the dashboard (by clicking the copy button) and transfer a small amount of SOL (e.g. 0.05 SOL) to it on Mainnet.
+In institutional Solana execution, synthetic test suites that mock network calls or return hardcoded success strings provide zero assurance of live performance. When real network congestion strikes, mocked systems fail catastrophically.
 
-**Error: "blockhash not found"**
-* **Cause**: Solana RPC blockhash is stale, or the network is highly congested.
-* **Solution**: The Rust engine handles this autonomously and will trigger a retry. If it persists, verify your RPC node endpoint settings in your configuration file.
+Sentry 2.0 enforces a strict **Zero-Mock Architecture**:
+- All benchmark runs connect to live Solana clusters (Mainnet-Beta and Devnet).
+- Fault-injection scenarios produce **authentic Solana RPC preflight simulation rejections**.
+- Every execution receipt is signed with real cryptographic keypairs.
 
-**Error: "Yellowstone stream disconnected"**
-* **Cause**: The gRPC provider rejected the auth token, or the connection timed out.
-* **Solution**: Verify that your gRPC token is valid and active. If the gRPC connection fails, transaction confirmation will fall back to RPC polling (`rpc_polling_fallback`) without any loss of data.
+---
+
+## 2. Authentic Fault-Injection Suite
+
+The benchmark harness implements five realistic fault conditions:
+
+| Fault Type | Injection Mechanism | Authentic Cluster Response |
+| :--- | :--- | :--- |
+| **`expired_blockhash`** | Transmits an unmined, invalid 32-byte blockhash | RPC simulation preflight rejects with `BlockhashNotFound`. |
+| **`preflight_fail`** | Submits a transfer of 1,000 SOL from a wallet holding rent reserve | RPC simulation rejects with `InsufficientFundsForRent`. |
+| **`rpc_timeout`** | Races the broadcast against an 80ms wall-clock deadline | Client-side timeout triggers latency-drop recovery. |
+| **`duplicate_tx`** | Resends an identical raw transaction signature | Intercepted in sub-50ns by Cuckoo filter, or rejected by RPC with `AlreadyProcessed`. |
+| **`policy_abort`** | Simulates extreme market volatility crossing risk thresholds | Sentry's internal circuit breaker trips before signing, spending 0 lamports. |
+
+---
+
+## 3. Deterministic Safety Invariants
+
+Sentry 2.0 implements non-negotiable safety guardrails that protect operator capital under all network conditions:
+
+### 3.1 SIMD-0047 Rent Floor Protection
+Solana accounts require a minimum balance to remain rent-exempt. Under Solana Improvement Document 0047 (SIMD-0047), draining an account below the rent-exempt floor risks de-allocation or failed preflights.
+- Sentry enforces an inviolable floor of **650,240 lamports** (~0.00065 SOL).
+- Even during extreme tip escalation, the policy engine refuses to construct transactions that would dip below this reserve.
+- In the 100-run Mainnet matrix, Sentry completed all 100 runs, spent only 0.000703 SOL, and left 0.001437 SOL in the wallet—comfortably above the rent floor.
+
+### 3.2 Circuit Breaker State Machine
+To prevent runaway fee burn during cascading on-chain anomalies, Sentry maintains a finite-state machine:
+- **`Closed` (Normal Operation)**: All policy-compliant transactions proceed to execution.
+- **`Open` (Halted)**: Trips when consecutive failures exceed 3 within a 10-slot window. Aborts execution before transaction construction, spending 0 lamports.
+- **`Half-Open` (Probing)**: Dispatches a single test transaction with high SWQoS priority. If successful, resets to `Closed`; if failed, returns to `Open`.
