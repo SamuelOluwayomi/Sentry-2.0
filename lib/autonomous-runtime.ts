@@ -29,6 +29,14 @@ import {
   persistReceipt, buildForensicReport,
 } from "./evidence-engine";
 import type { FaultType } from "./types";
+import {
+  startYellowstoneStream, stopYellowstoneStream,
+  isYellowstoneHealthy, yellowstoneEmitter,
+} from "./yellowstone-stream";
+import {
+  startBlurStream, stopBlurStream,
+  isBlurHealthy, setBlurSlot, blurEmitter,
+} from "./blur-stream";
 
 // -- Event Bus (in-process pub/sub) --
 class EventBus extends EventEmitter {
@@ -85,14 +93,14 @@ export function getSystemHealth(): SystemHealth {
   const components: ComponentHealth[] = [
     {
       name: "Solami Yellowstone",
-      status: streamHealthy ? "healthy" : "degraded",
+      status: isYellowstoneHealthy() ? "healthy" : "degraded",
       lastCheckedAt: new Date().toISOString(),
     },
     {
       name: "Solami Blur",
-      status: blurHealthy ? "healthy" : "standby",
+      status: isBlurHealthy() ? "healthy" : "standby",
       lastCheckedAt: new Date().toISOString(),
-      detail: blurHealthy ? "Live block scanner active" : "Blur not connected; block scanner idle",
+      detail: isBlurHealthy() ? "Live decoded market data active (Solami Blur WebSocket)" : "Blur connecting...",
     },
     {
       name: "Solami Beam",
@@ -465,41 +473,61 @@ export function startLiveEventLoop(intervalMs = 2000) {
   if (liveLoopRunning) return;
   liveLoopRunning = true;
 
+  // -- Yellowstone gRPC: real-time confirmed transactions from Solami --
+  startYellowstoneStream().catch((err: unknown) =>
+    console.warn("[Runtime] Yellowstone failed to start:", err),
+  );
+  yellowstoneEmitter.on("event", (event: SentryEvent) => {
+    currentSlot = event.slot || currentSlot;
+    eventBus.emit("event", event);
+    processEvent(event).catch(() => {});
+  });
+  yellowstoneEmitter.on("health", (h: boolean) => { streamHealthy = h; });
+
+  // -- Solami Blur: decoded market data (swaps, liquidity, launches) --
+  startBlurStream().catch((err: unknown) =>
+    console.warn("[Runtime] Blur failed to start:", err),
+  );
+  blurEmitter.on("event", (event: SentryEvent) => {
+    eventBus.emit("event", event);
+    processEvent(event).catch(() => {});
+  });
+  blurEmitter.on("health", (h: boolean) => { blurHealthy = h; });
+
+  // -- RPC block scanner: fallback for large-transfer events --
   const loop = async () => {
     if (!liveLoopRunning) return;
     try {
       const snapshot = await getNetworkSnapshot(rpcUrl);
-      const head = (snapshot.slot || currentSlot) - 32; // RPC serves full blocks ~32 slots behind head
+      const head = (snapshot.slot || currentSlot) - 32;
       currentSlot = snapshot.slot || currentSlot;
+      setBlurSlot(currentSlot);
       if (lastScannedSlot === 0 || head - lastScannedSlot > 20) lastScannedSlot = head - 1;
       const target = Math.min(head, lastScannedSlot + 4);
       for (let slot = lastScannedSlot + 1; slot <= target; slot++) {
         const events = await fetchLiveTransferEvents(rpcUrl, slot).catch(() => []);
         for (const event of events) {
-          eventBus.emit("event", event);
-          processEvent(event).catch(() => {/* receipt records failure */});
+          if (!isYellowstoneHealthy()) {
+            eventBus.emit("event", event);
+            processEvent(event).catch(() => {});
+          }
         }
         lastScannedSlot = slot;
       }
-      blurHealthy = true;
-    } catch {
-      // non-fatal: retry on next tick
-    }
+    } catch { /* non-fatal */ }
     setTimeout(loop, intervalMs);
   };
-
   setTimeout(loop, 500);
 }
 
 export function stopLiveEventLoop() {
   liveLoopRunning = false;
+  stopYellowstoneStream();
+  stopBlurStream();
 }
 
-// -- Fault Test Entry Point (real transactions, real network errors) --
+// -- Fault Test Entry Point (runs simulated fault trace in Shadow, or real on-chain in Live) --
 export async function injectFault(faultType: FaultType): Promise<ExecutionReceipt> {
-  if (executionMode !== "live") {
-    throw new Error("Fault tests send real transactions. Set execution mode to LIVE first.");
-  }
   const snapshot = await getNetworkSnapshot(rpcUrl);
   currentSlot = snapshot.slot || currentSlot;
   const event = createFaultEvent(faultType, currentSlot);

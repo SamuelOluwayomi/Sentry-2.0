@@ -1,9 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+/* ==========================================================================
+   LIGHT MODE (Default Retro Editorial Theme)
+   ========================================================================== */
 :root {
   --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Fraunces', Georgia, serif;
   --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Primary Brand: Sentry Orange */
   --ifm-color-primary: #FF5A26;
   --ifm-color-primary-dark: #E84D1C;
   --ifm-color-primary-darker: #D84213;
@@ -11,31 +16,103 @@
   --ifm-color-primary-light: #FF6E3F;
   --ifm-color-primary-lighter: #FF7F55;
   --ifm-color-primary-lightest: #FFA585;
+
   --ifm-code-font-size: 92%;
   --docusaurus-highlighted-code-line-bg: rgba(255, 90, 38, 0.1);
+
+  /* Light Theme Backgrounds & Surfaces */
   --ifm-background-color: #F7F4EC;
+  --ifm-background-surface-color: #FFFFFF;
   --ifm-navbar-background-color: #F7F4EC;
+  --ifm-footer-background-color: #121212;
+
+  /* Light Theme Typography */
+  --ifm-font-color-base: #121212;
+  --ifm-heading-color: #121212;
+  --ifm-color-content: #121212;
+  --ifm-color-content-secondary: #5A564F;
+
+  /* Sidebar Navigation */
+  --ifm-menu-color: #5A564F;
+  --ifm-menu-color-active: #FF5A26;
+  --ifm-menu-color-background-active: rgba(255, 90, 38, 0.1);
+  --ifm-menu-color-background-hover: rgba(18, 18, 18, 0.05);
+
+  /* Borders & Dividers */
+  --ifm-toc-border-color: rgba(18, 18, 18, 0.2);
+  --ifm-hr-border-color: rgba(18, 18, 18, 0.15);
+  --ifm-table-border-color: #121212;
 }
 
+/* ==========================================================================
+   DARK MODE (Deep Obsidian / Matte Charcoal with High Contrast Legibility)
+   ========================================================================== */
 [data-theme='dark'] {
   --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Fraunces', Georgia, serif;
   --ifm-font-family-monospace: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Primary Brand: Sentry Orange (tuned for dark contrast) */
   --ifm-color-primary: #FF5A26;
-  --ifm-color-primary-dark: #E84D1C;
-  --ifm-color-primary-darker: #D84213;
-  --ifm-color-primary-darkest: #B8340B;
-  --ifm-color-primary-light: #FF6E3F;
-  --ifm-color-primary-lighter: #FF7F55;
-  --ifm-color-primary-lightest: #FFA585;
+  --ifm-color-primary-dark: #FF6E3F;
+  --ifm-color-primary-darker: #FF7F55;
+  --ifm-color-primary-darkest: #FFA585;
+  --ifm-color-primary-light: #E84D1C;
+  --ifm-color-primary-lighter: #D84213;
+  --ifm-color-primary-lightest: #B8340B;
+
   --docusaurus-highlighted-code-line-bg: rgba(255, 90, 38, 0.2);
+
+  /* Dark Theme Backgrounds & Surfaces */
+  --ifm-background-color: #101012;
+  --ifm-background-surface-color: #18181C;
+  --ifm-navbar-background-color: #101012;
+  --ifm-footer-background-color: #0A0A0C;
+  --ifm-card-background-color: #18181C;
+
+  /* Dark Theme Typography (Crisp, High Contrast) */
+  --ifm-font-color-base: #E4E4E7;
+  --ifm-heading-color: #FFFFFF;
+  --ifm-color-content: #E4E4E7;
+  --ifm-color-content-secondary: #A1A1AA;
+
+  /* Sidebar Navigation */
+  --ifm-menu-color: #A1A1AA;
+  --ifm-menu-color-active: #FF5A26;
+  --ifm-menu-color-background-active: rgba(255, 90, 38, 0.15);
+  --ifm-menu-color-background-hover: rgba(255, 255, 255, 0.05);
+
+  /* Navbar Link Colors */
+  --ifm-navbar-link-color: #E4E4E7;
+  --ifm-navbar-link-hover-color: #FF5A26;
+
+  /* TOC (Table of Contents) */
+  --ifm-toc-link-color: #71717A;
+  --ifm-toc-border-color: #27272A;
+
+  /* Borders & Dividers */
+  --ifm-hr-border-color: #27272A;
+  --ifm-table-border-color: #27272A;
+  --ifm-table-stripe-background: #18181C;
+
+  /* Color Emphasis Shades */
+  --ifm-color-emphasis-100: #18181C;
+  --ifm-color-emphasis-200: #27272A;
+  --ifm-color-emphasis-300: #3F3F46;
+  --ifm-color-emphasis-400: #52525B;
+  --ifm-color-emphasis-500: #71717A;
+  --ifm-color-emphasis-600: #A1A1AA;
+  --ifm-color-emphasis-700: #D4D4D8;
+  --ifm-color-emphasis-800: #E4E4E7;
+  --ifm-color-emphasis-900: #FAFAFA;
 }
 
+/* Typography Headings */
 h1, h2, h3, h4, h5, h6, .navbar__title {
   font-family: 'Fraunces', Georgia, serif !important;
 }
 
-/* Invert white logo in light mode so it reads dark */
+/* Logo inversion */
 html[data-theme='light'] .custom-logo {
   filter: invert(1);
 }
@@ -56,10 +133,16 @@ html[data-theme='dark'] .custom-logo {
   object-fit: contain;
 }
 
-.navbar {
+/* Navbar Border */
+html[data-theme='light'] .navbar {
   border-bottom: 2px solid #121212 !important;
 }
 
+html[data-theme='dark'] .navbar {
+  border-bottom: 1px solid #27272A !important;
+}
+
+/* Code Blocks */
 html[data-theme='light'] .theme-code-block {
   border-left: 4px solid #FF5A26 !important;
   background-color: #FFFFFF !important;
@@ -68,9 +151,13 @@ html[data-theme='light'] .theme-code-block {
 
 html[data-theme='dark'] .theme-code-block {
   border-left: 4px solid #FF5A26 !important;
-  background-color: #121212 !important;
+  background-color: #18181C !important;
+  border-top: 1px solid #27272A;
+  border-right: 1px solid #27272A;
+  border-bottom: 1px solid #27272A;
 }
 
+/* Inline Code */
 html[data-theme='light'] code:not([class*='language-']) {
   background-color: #FFFFFF;
   color: #FF5A26;
@@ -79,4 +166,110 @@ html[data-theme='light'] code:not([class*='language-']) {
   padding: 0.1em 0.4em;
   font-size: 0.85em;
   font-weight: 700;
+}
+
+html[data-theme='dark'] code:not([class*='language-']) {
+  background-color: #1E1E22;
+  color: #FF7F55;
+  border: 1px solid #2E2E33;
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+/* Tables */
+html[data-theme='light'] table {
+  border-collapse: collapse;
+  background-color: #FFFFFF;
+}
+
+html[data-theme='light'] table th {
+  background-color: #F7F4EC;
+  color: #121212;
+  border: 2px solid #121212;
+}
+
+html[data-theme='light'] table td {
+  border: 1px solid #121212;
+  color: #121212;
+}
+
+html[data-theme='dark'] table {
+  border-collapse: collapse;
+  background-color: #18181C;
+}
+
+html[data-theme='dark'] table th {
+  background-color: #202026;
+  color: #FFFFFF;
+  border: 1px solid #2E2E33;
+}
+
+html[data-theme='dark'] table td {
+  border: 1px solid #2E2E33;
+  color: #E4E4E7;
+}
+
+html[data-theme='dark'] table tr:nth-child(2n) {
+  background-color: #141418;
+}
+
+/* Blockquotes */
+html[data-theme='light'] blockquote {
+  border-left: 4px solid #FF5A26;
+  background-color: #FFFFFF;
+  color: #5A564F;
+  border-top: 1px solid rgba(18, 18, 18, 0.1);
+  border-right: 1px solid rgba(18, 18, 18, 0.1);
+  border-bottom: 1px solid rgba(18, 18, 18, 0.1);
+}
+
+html[data-theme='dark'] blockquote {
+  border-left: 4px solid #FF5A26;
+  background-color: #18181C;
+  color: #A1A1AA;
+  border-top: 1px solid #27272A;
+  border-right: 1px solid #27272A;
+  border-bottom: 1px solid #27272A;
+}
+
+/* Sidebar Container */
+html[data-theme='light'] .theme-doc-sidebar-container {
+  border-right: 2px solid #121212 !important;
+}
+
+html[data-theme='dark'] .theme-doc-sidebar-container {
+  border-right: 1px solid #27272A !important;
+}
+
+/* Pagination Links */
+html[data-theme='light'] .pagination-nav__link {
+  border: 2px solid #121212;
+  background-color: #FFFFFF;
+  color: #121212;
+}
+
+html[data-theme='light'] .pagination-nav__link:hover {
+  border-color: #FF5A26;
+}
+
+html[data-theme='dark'] .pagination-nav__link {
+  border: 1px solid #27272A;
+  background-color: #18181C;
+  color: #E4E4E7;
+}
+
+html[data-theme='dark'] .pagination-nav__link:hover {
+  border-color: #FF5A26;
+}
+
+/* TOC Active & Hover */
+html[data-theme='dark'] .table-of-contents__link {
+  color: #71717A;
+}
+
+html[data-theme='dark'] .table-of-contents__link:hover,
+html[data-theme='dark'] .table-of-contents__link--active {
+  color: #FF5A26;
 }

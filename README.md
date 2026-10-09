@@ -16,28 +16,58 @@ Solami's own operational principle is: *"read state with RPC, react to change wi
 | **Solami Beam (SWQoS)** | `https://beam.solami.dev:11000` | High-priority Stake-Weighted Quality of Service (SWQoS) TPU transaction landing rail. Bypasses standard validator queue drops during DEX volatility. |
 | **Solami On-Chain Tip API** | `https://api.solami.dev/onchain/tip-addresses` | Real-time discovery of active Solami Beam tip accounts (`...beam`) for dynamic validator priority inclusion. |
 | **Solami Native WebSocket** | `wss://ws.solami.dev/ws/sol` | Low-latency Solana slot and account subscription stream for instantaneous congestion regime shifts. |
+| **Solami Blur (Decoded Data)** | `wss://blur.solami.dev/ws` | Real-time decoded DEX market data — swaps, liquidity events, and new token launches via WebSocket. |
+| **Yellowstone gRPC (TypeScript)** | `grpc.solami.dev` | Native `@triton-one/yellowstone-grpc` gRPC stream for zero-latency confirmed transaction detection in the Next.js runtime. |
 
 ---
 
-## Quick Start: 5-Second Live Verification
+## Quick Start
 
-Inspect and verify the engine against live Solana Mainnet-Beta with zero manual setup:
+### Option A — Full Dashboard (Next.js + Live Streams)
 
 ```bash
-# 1. Probe Solami RPC, Beam tip sinks, wallet rent reserve, and cryptographic signing (5 seconds)
+# 1. Clone & install
+git clone https://github.com/YOUR_REPO/sentry-2.0.git
+cd sentry-2.0
+npm install
+
+# 2. Configure environment
+cp .env.example .env
+# Fill in: SOLANA_RPC_URL, BEAM_ENDPOINT, WALLET_PRIVATE_KEY, GROQ_API_KEY, SOLAMI_API_KEY, GRPC_TOKEN
+
+# 3. Start the Observatory Dashboard
+npm run dev
+# Open http://localhost:3000
+# → Yellowstone gRPC stream connects automatically
+# → Solami Blur WebSocket connects automatically (decoded swaps/liquidity)
+# → Groq AI analysis active on each transaction receipt
+```
+
+### Option B — CLI / Benchmark Only
+
+```bash
+# 5-second live diagnostic (Solami RPC + Beam + wallet)
 npm run check:live
 
-# 2. Start the real-time autonomous execution monitor (streams live slots & dynamic Beam tips)
+# Real-time monitor (Yellowstone slot stream + Beam tip feed)
 npm run monitor
 
-# 3. Execute the 100-run live Mainnet benchmark matrix
+# 100-run Mainnet fault-injection matrix
 npm run benchmark:mainnet
 
-# 4. Execute the 1,020-run fault-injected Devnet stress matrix
+# 1,020-run Devnet stress matrix
 npm run benchmark:devnet
 
-# 5. Deterministically reproduce any run from the cryptographically verified ledger
+# Replay any sealed run deterministically
 npm run replay -- --run 1 --mainnet
+```
+
+### Option C — Native Rust Engine (Yellowstone gRPC + Jito)
+
+```bash
+cd engine
+cargo build --release
+./target/release/engine   # Streams Yellowstone gRPC and submits via Solami Beam
 ```
 
 ---
@@ -47,11 +77,26 @@ npm run replay -- --run 1 --mainnet
 1. [The Problem: Alerting vs Execution](#1-the-problem-alerting-vs-execution)
 2. [System Architecture](#2-system-architecture)
 3. [Core Subsystems](#3-core-subsystems)
+   - [3.1 Solami Telemetry & Market Classifier](#31-solami-telemetry--market-classifier)
+   - [3.2 Dynamic Tip Engine and Solami Beam Routing](#32-dynamic-tip-engine-and-solami-beam-routing)
+   - [3.3 Groq LPU Hardware Inference](#33-groq-lpu-hardware-inference)
+   - [3.4 Deterministic Policy Engine & Safety Gates](#34-deterministic-policy-engine--safety-gates)
+   - [3.5 Native Rust Confirmation Kernel](#35-native-rust-confirmation-kernel)
+   - [3.6 Cryptographic Provenance Ledger](#36-cryptographic-provenance-ledger)
+   - [3.7 Cuckoo Filter Duplicate Suppression](#37-cuckoo-filter-duplicate-suppression)
+   - [3.8 Multi-Model AI Tip Cascade & Failure Taxonomy](#38-multi-model-ai-tip-cascade--failure-taxonomy)
+   - [3.9 Orca Whirlpool Concentrated Liquidity Execution](#39-orca-whirlpool-concentrated-liquidity-execution)
+   - [3.10 Dual-Rail Simultaneous Submission](#310-dual-rail-simultaneous-submission)
+   - [3.11 RPC Cluster Consistency Diagnostics](#311-rpc-cluster-consistency-diagnostics)
 4. [Dual Benchmark Matrices](#4-dual-benchmark-matrices)
 5. [Fault Injection Design](#5-fault-injection-design)
 6. [Cryptographic Receipt Chain](#6-cryptographic-receipt-chain)
 7. [Autonomous Engine](#7-autonomous-engine)
 8. [Dashboard and UI](#8-dashboard-and-ui)
+   - [8.1 System Health Panel](#81-system-health-panel)
+   - [8.2 Evidence Explorer](#82-evidence-explorer)
+   - [8.3 Mission Profiles](#83-mission-profiles)
+   - [8.4 Intelligence and Execution Tools Panel](#84-intelligence-and-execution-tools-panel)
 9. [Project Structure](#9-project-structure)
 10. [Local Development and CLI](#10-local-development-and-cli)
 11. [Bounty Deliverables](#11-bounty-deliverables)
@@ -153,6 +198,39 @@ Zero-dependency partial-key cuckoo filter (16-bit fingerprints, 4 slots per buck
 - Both benchmark runners route `duplicate_tx` resends through the filter before touching RPC.
 
 False-positive rate is bounded by roughly `2b / 2^16` (about 0.012%) at high load; a false positive suppresses a legitimate event, never admits a duplicate.
+
+### 3.8 Multi-Model AI Tip Cascade & Failure Taxonomy
+Files: [`lib/tip-engine.ts`](file:///home/samuel/sentry%202.0/lib/tip-engine.ts), [`app/api/tip-decision/route.ts`](file:///home/samuel/sentry%202.0/app/api/tip-decision/route.ts)
+
+A high-availability AI provider cascade to prevent single-point-of-failure inference degradation during extreme network congestion:
+- **Provider Cascade**: Groq (`llama-3.3-70b-versatile`) -> Anthropic (`claude-3-5-haiku-20241022`) -> Google Gemini (`gemini-1.5-flash`) -> OpenAI (`gpt-4o-mini`) -> Deterministic heuristic fallback. The first available provider to return a valid structured decision wins.
+- **Inviolable Bounds**: Strict 1,000 lamport absolute floor (zero-tip transactions drop under load); 5,000,000 lamport normal ceiling (protects against model hallucination); high-failure dynamic escalation when recent failure rate exceeds 50%.
+- **Error Taxonomy**: `classifyTxFailure()` maps raw on-chain transaction errors into five structured classes (`expired_blockhash`, `insufficient_funds`, `custom_program_error`, `node_rate_limited`, `stale_slot`) with deterministic recovery recommendations.
+
+### 3.9 Orca Whirlpool Concentrated Liquidity Execution
+Files: [`lib/orca-swap.ts`](file:///home/samuel/sentry%202.0/lib/orca-swap.ts), [`app/api/orca-swap/route.ts`](file:///home/samuel/sentry%202.0/app/api/orca-swap/route.ts)
+
+Direct on-chain liquidity action via the official `@orca-so/whirlpools-sdk`:
+- Initializes `WhirlpoolContext` against mainnet Whirlpool programs using the Solami Private RPC connection.
+- Major supported pool pairs: SOL/USDC (`HJPjo...`), SOL/USDT (`4fuUi...`), SOL/mSOL (`9vqYJ...`), and mSOL/USDC (`AiMZS...`).
+- Computes swap quotes with precise slippage boundaries and dynamic Solami priority tips.
+- Submits signed transactions directly to Solami Beam SWQoS TPU sockets for deterministic validator inclusion.
+
+### 3.10 Dual-Rail Simultaneous Submission
+File: [`lib/dual-rail.ts`](file:///home/samuel/sentry%202.0/lib/dual-rail.ts)
+
+Concurrent transaction dispatch engine eliminating sequential retry latency:
+- Broadcasts signed transactions simultaneously across three independent landing paths using `Promise.allSettled`: Solami Beam SWQoS (`BEAM_ENDPOINT`), Jito Block Engine bundles (`JITO_BLOCK_ENGINE_URL`), and Solami Private RPC.
+- The first rail to confirm on-chain wins and is immediately reported; losing rails are cancelled without extra wait time.
+- Emits real-time Server-Sent Events landing receipts capturing winning rail names, confirmation durations (ms), and Solscan transaction signatures.
+
+### 3.11 RPC Cluster Consistency Diagnostics
+Files: [`lib/rpc-consistency.ts`](file:///home/samuel/sentry%202.0/lib/rpc-consistency.ts), [`app/api/rpc-check/route.ts`](file:///home/samuel/sentry%202.0/app/api/rpc-check/route.ts)
+
+Continuous cluster synchronization probe:
+- Fires parallel JSON-RPC probes (`getSlot`, `getVersion`, `getLatestBlockhash`) across Solami Private RPC, official Solana Mainnet-Beta public nodes, and secondary cluster mirrors.
+- Tracks head slot at `processed` commitment, response latency (ms), node version, and latest blockhash prefix.
+- Computes `solamiAdvantageSlots`: The empirical lead margin demonstrating that Solami Private RPC consistently observes slot progression ahead of public endpoints.
 
 ---
 
@@ -490,10 +568,23 @@ npm run replay -- --run 42
 
 ## 8. Dashboard and UI
 
-Sentry 2.0 includes a production Next.js 16 observatory dashboard with:
-- **System Health Panel**: Real-time status for Solami RPC, Solami Beam, and Circuit Breaker state.
-- **Evidence Explorer**: Interactive dual-rail matrix viewer with live cryptographic verification.
-- **Mission Profiles**: Autonomous execution controls for Snipers, Arbitrageurs, Liquidity Managers, and MEV Searchers.
+Sentry 2.0 includes a production Next.js 16 observatory dashboard designed for real-time telemetry, autonomous execution control, and cryptographic auditability:
+
+### 8.1 System Health Panel
+Real-time status indicators monitoring Solami Private RPC connectivity, Solami Beam SWQoS throughput, Cuckoo filter deduplication statistics, and active Circuit Breaker safety states.
+
+### 8.2 Evidence Explorer
+Interactive execution receipt matrix viewer supporting cryptographic verification of every run in the append-only SHA-256 hash chain and Ed25519 signature validation.
+
+### 8.3 Mission Profiles
+Autonomous execution controllers configured for production use cases: Sniper, Arbitrageur, Liquidity Manager, and MEV Searcher profiles with configurable simulation and live execution modes.
+
+### 8.4 Intelligence and Execution Tools Panel
+Surfaces the four advanced execution subsystems:
+- **Multi-Model Tip Engine Console**: Live inputs for simulated network congestion variables, provider cascade querying (Groq, Anthropic, Gemini, OpenAI, Heuristic), and decision history.
+- **RPC Cluster Consistency Diagnostic**: Live comparative benchmarking table showing head slot, lag relative to fastest node, response latency in ms, and Solami slot advantage banner.
+- **Orca Whirlpool DEX Swap Terminal**: Live token pair selector, buy/sell direction toggle, swap amount, slippage boundary, and direct execution through Solami Beam SWQoS.
+- **Dual-Rail Live Submission Stream**: Real-time Server-Sent Events stream showing winning landing rails (`BEAM`, `JITO`, `RPC`), confirmation durations, and Solscan verification links.
 
 ---
 
@@ -562,7 +653,9 @@ GROQ_API_KEY=your_groq_key
 
 ## 11. Bounty Deliverables
 
-- **Solami Infrastructure Integration**: Live Solami Private RPC, Solami Beam SWQoS priority routing, and real-time Beam tip address discovery.
-- **Autonomous Execution Engine**: Sub-millisecond market regime classification, Groq LPU inference, and dual-rail transaction landing.
-- **Empirical Evidence**: Dual benchmark matrices (100 Mainnet runs + 1,020 Devnet stress runs) with cryptographic hash-chain provenance.
-- **Open Source**: Full MIT License with reproducible CLI tools.
+- **Solami Infrastructure Integration**: Live Solami Private RPC, Solami Beam SWQoS priority routing, Solami Dynamic Tip API (`...beam` sink accounts), Solami Native WebSocket, and Yellowstone gRPC streaming.
+- **Real On-Chain Action**: Live concentrated liquidity DEX swaps via `@orca-so/whirlpools-sdk` executed against Orca pools on mainnet and submitted through Solami Beam.
+- **Autonomous Execution Engine**: Sub-millisecond market regime classification, multi-model AI provider cascade (Groq LPU -> Anthropic -> Gemini -> OpenAI -> Heuristic), and dual-rail simultaneous transaction landing.
+- **RPC Cluster Benchmarking**: Continuous multi-node consistency diagnostics measuring empirical slot head advance of Solami Private RPC over public nodes.
+- **Empirical Evidence**: Dual benchmark matrices (100 Mainnet runs + 1,020 Devnet stress runs) with SHA-256 hash-chain provenance and Ed25519 cryptographic signatures.
+- **Observatory Dashboard & Docs**: Interactive Next.js 16 UI with comprehensive execution tools panel, verified Docusaurus technical documentation, and full MIT open source codebase.

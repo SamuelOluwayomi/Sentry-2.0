@@ -1,5 +1,5 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
@@ -26,6 +26,39 @@ const config: Config = {
   projectName: 'docusaurus', // Usually your repo name.
 
   onBrokenLinks: 'throw',
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {},
+      innerHTML: `(function() {
+        function isExt(err, filename) {
+          var msg = (err && err.message) || String(err || '');
+          var stack = (err && err.stack) || '';
+          var file = filename || '';
+          return (
+            file.indexOf('chrome-extension://') !== -1 ||
+            file.indexOf('moz-extension://') !== -1 ||
+            stack.indexOf('chrome-extension://') !== -1 ||
+            stack.indexOf('moz-extension://') !== -1 ||
+            msg.indexOf('Could not establish connection') !== -1 ||
+            msg.indexOf('Receiving end does not exist') !== -1
+          );
+        }
+        window.addEventListener('error', function(e) {
+          if (isExt(e.error || e.message, e.filename)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isExt(e.reason)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();`,
+    },
+  ],
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -86,7 +119,7 @@ const config: Config = {
           label: 'Documentation',
         },
         {
-          href: 'https://github.com/SamuelOluwayomi/smart-transaction-observatory',
+          href: 'https://github.com/SamuelOluwayomi/Sentry-2.0',
           label: 'GitHub',
           position: 'right',
         },

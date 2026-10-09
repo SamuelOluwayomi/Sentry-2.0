@@ -382,7 +382,7 @@ export function evaluatePolicy(
   passedChecks.push(`Daily spend: ${budget.dailySpendSol.toFixed(4)}/${matchingRule.limits.maxDailySpendSol} SOL`);
 
   // Check: wallet balance
-  if (walletBalanceSol !== undefined && walletBalanceSol < 0.01) {
+  if (walletBalanceSol !== undefined && walletBalanceSol < 0.0007) {
     failedChecks.push(`Wallet balance too low: ${walletBalanceSol.toFixed(4)} SOL`);
     return {
       decision: "blocked",

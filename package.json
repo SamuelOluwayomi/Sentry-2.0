@@ -35,9 +35,13 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@orca-so/whirlpools-sdk": "^0.22.0",
     "@solana/client": "^1.2.0",
     "@solana/react-hooks": "^1.1.5",
     "@solana/web3.js": "^1.98.4",
+    "@triton-one/yellowstone-grpc": "^9.0.0",
+    "decimal.js": "^10.6.0",
     "next": "16.2.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -48,6 +52,7 @@
   "devDependencies": {
     "@next/swc-linux-x64-gnu": "^16.2.9",
     "@tailwindcss/postcss": "^4",
+    "@types/bn.js": "^5.2.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

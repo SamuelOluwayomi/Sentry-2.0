@@ -96,6 +96,24 @@ EngineSignature_i = Ed25519-Sign(ReceiptHash_i, PrivateKey)
 ```
   This guarantees mathematical immutability and complete auditability.
 
+### 3.6 Multi-Model AI Tip Cascade & Failure Taxonomy
+- **Source**: `lib/tip-engine.ts`
+- **Function**: Multi-provider fallback cascade (Groq LPU -> Anthropic -> Google Gemini -> OpenAI -> Deterministic heuristic) protecting against single-point-of-failure inference timeouts during high-volatility congestion regimes.
+- **Bounds**: Enforces a strict 1,000 lamport absolute floor, 5,000,000 lamport ceiling under normal conditions, and dynamic escalation when recent failure rate exceeds 50%.
+- **Error Taxonomy**: `classifyTxFailure()` maps raw on-chain program failures and RPC errors into five structured classes with deterministic retry recommendations.
+
+### 3.7 Orca Whirlpool Concentrated Liquidity Execution
+- **Source**: `lib/orca-swap.ts`
+- **Function**: Direct on-chain liquidity action via `@orca-so/whirlpools-sdk`. Builds and executes real concentrated liquidity swaps across SOL/USDC, SOL/USDT, SOL/mSOL, and mSOL/USDC pools, routing output transactions directly to Solami Beam SWQoS TPU sockets.
+
+### 3.8 Dual-Rail Simultaneous Submission
+- **Source**: `lib/dual-rail.ts`
+- **Function**: Eliminates sequential retry lag by dispatching transactions simultaneously across Solami Beam SWQoS, Jito Block Engine bundles, and Solami Private RPC using `Promise.allSettled`. Whichever landing rail achieves validator confirmation first is taken; losing attempts are silently dropped.
+
+### 3.9 RPC Cluster Consistency Diagnostic
+- **Source**: `lib/rpc-consistency.ts`
+- **Function**: Real-time multi-node benchmarking engine probing Solami Private RPC head slot, response latency, and blockhash progression against public Mainnet-Beta and secondary RPC mirrors. Computes `solamiAdvantageSlots` quantifying empirical latency superiority.
+
 ---
 
 ## 4. Rust Confirmation Kernel

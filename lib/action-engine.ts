@@ -13,6 +13,11 @@ import type {
   ActionResult, RouteScore, PolicyEvaluation, NetworkSnapshot,
 } from "./types";
 
+import { submitDualRail } from "./dual-rail";
+import { decideTip, classifyTxFailure } from "./tip-engine";
+import { executeOrcaWhirlpoolSwap, KNOWN_POOLS } from "./orca-swap";
+export { decideTip, classifyTxFailure, KNOWN_POOLS, executeOrcaWhirlpoolSwap };
+
 const MEMO_PROGRAM_ID = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const BEAM_ENDPOINT = process.env.BEAM_ENDPOINT ?? "https://beam.solami.dev";
 const JITO_ENDPOINT = process.env.JITO_BLOCK_ENGINE_URL ?? "https://mainnet.block-engine.jito.wtf";
@@ -292,3 +297,72 @@ export async function executeAction(params: {
     simulationError,
   };
 }
+
+
+// ── Jupiter v6 Swap Strategy (via Solami Beam) ───────────────────────────────
+// Executes a real token swap on mainnet using the Jupiter Aggregator v6 API.
+// The signed transaction is broadcast through Solami Beam for priority landing.
+export async function executeJupiterSwap(params: {
+  keypair: import("@solana/web3.js").Keypair;
+  inputMint: string;   // e.g. "So11111111111111111111111111111111111111112" for SOL
+  outputMint: string;  // e.g. USDC mint
+  amountLamports: number;
+  tipLamports: number;
+  slippageBps?: number;
+}): Promise<{ signature: string; inAmount: number; outAmount: number; route: string }> {
+  const { keypair, inputMint, outputMint, amountLamports, tipLamports, slippageBps = 50 } = params;
+
+  // 1. Quote best route from Jupiter v6
+  const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountLamports}&slippageBps=${slippageBps}&onlyDirectRoutes=false`;
+  const quoteResp = await fetch(quoteUrl, { signal: AbortSignal.timeout(6000) });
+  if (!quoteResp.ok) throw new Error(`Jupiter quote HTTP ${quoteResp.status}`);
+  const quote = await quoteResp.json() as {
+    inAmount: string; outAmount: string;
+    routePlan: Array<{ swapInfo: { label: string } }>;
+  };
+
+  const routeLabel = quote.routePlan?.[0]?.swapInfo?.label ?? "jupiter";
+  console.log(`[Jupiter] ${routeLabel}: ${quote.inAmount} -> ${quote.outAmount}`);
+
+  // 2. Build swap transaction
+  const swapResp = await fetch("https://quote-api.jup.ag/v6/swap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      quoteResponse: quote,
+      userPublicKey: keypair.publicKey.toBase58(),
+      wrapAndUnwrapSol: true,
+      prioritizationFeeLamports: tipLamports,
+      dynamicComputeUnitLimit: true,
+    }),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!swapResp.ok) throw new Error(`Jupiter swap TX HTTP ${swapResp.status}`);
+  const { swapTransaction } = await swapResp.json() as { swapTransaction: string };
+
+  // 3. Deserialise, sign, and submit via Solami Beam
+  const { VersionedTransaction } = await import("@solana/web3.js");
+  const tx = VersionedTransaction.deserialize(Buffer.from(swapTransaction, "base64"));
+  tx.sign([keypair]);
+
+  const beamEndpoint = process.env.BEAM_ENDPOINT ?? "https://beam.solami.dev";
+  const beamResp = await fetch(`${beamEndpoint}/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: 1,
+      method: "sendTransaction",
+      params: [Buffer.from(tx.serialize()).toString("base64"), { encoding: "base64", skipPreflight: true }],
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  const beamJson = await beamResp.json() as { result?: string; error?: { message: string } };
+  if (beamJson.error) throw new Error(`Beam rejected swap: ${beamJson.error.message}`);
+
+  const { default: bs58mod } = await import("bs58");
+  const rawSig = tx.signatures[0];
+  const signature = rawSig ? bs58mod.encode(rawSig) : (beamJson.result ?? "unknown");
+
+  return { signature, inAmount: parseInt(quote.inAmount, 10), outAmount: parseInt(quote.outAmount, 10), route: routeLabel };
+}
+

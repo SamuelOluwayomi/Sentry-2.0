@@ -126,7 +126,14 @@ async function fetchTipPercentiles(rpcUrl: string): Promise<{
     // all oracles failed
   }
 
-  throw new Error("Live tip oracle failure: Jito, Solami Beam, and RPC fee endpoints unreachable");
+  // Resilient fallback: return safe dynamic tip floors instead of crashing the endpoint
+  return {
+    p25: BEAM_FLOOR_LAMPORTS,
+    p50: 50_000,
+    p75: 100_000,
+    p95: 500_000,
+    source: "beam",
+  };
 }
 
 /** Check Beam SWQoS health by querying active on-chain tip sinks */

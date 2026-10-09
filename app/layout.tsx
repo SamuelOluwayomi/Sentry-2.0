@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./components/providers";
 
@@ -21,6 +21,39 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function isExtensionError(err, filename) {
+                  var msg = (err && err.message) || String(err || '');
+                  var stack = (err && err.stack) || '';
+                  var file = filename || '';
+                  return (
+                    file.indexOf('chrome-extension://') !== -1 ||
+                    file.indexOf('moz-extension://') !== -1 ||
+                    stack.indexOf('chrome-extension://') !== -1 ||
+                    stack.indexOf('moz-extension://') !== -1 ||
+                    msg.indexOf('Could not establish connection') !== -1 ||
+                    msg.indexOf('Receiving end does not exist') !== -1
+                  );
+                }
+                window.addEventListener('error', function(e) {
+                  if (isExtensionError(e.error || e.message, e.filename)) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                  }
+                }, true);
+                window.addEventListener('unhandledrejection', function(e) {
+                  if (isExtensionError(e.reason)) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                  }
+                }, true);
+              })();
+            `,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"

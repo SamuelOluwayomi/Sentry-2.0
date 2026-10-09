@@ -76,3 +76,14 @@ For microsecond-precision confirmation tracking, Sentry 2.0 supports Yellowstone
 - **Slot Pulse Streaming**: Real-time emission of newly observed slots at the `processed` commitment level.
 - **Transaction Signature Subscriptions**: Instantaneous notification when a transaction reaches `confirmed` (supermajority consensus) without polling RPC.
 - **Zero-Allocation Deserialization**: High-speed binary protocol buffers reduce CPU overhead on high-throughput nodes.
+
+---
+
+## 6. Solami Cluster Consistency & Head Slot Lead
+
+To empirically validate Solami's low-latency performance against public RPC infrastructure, Sentry 2.0 incorporates a continuous multi-node consistency diagnostic (`lib/rpc-consistency.ts`):
+
+- **Head Slot Tracking**: Concurrently queries `getSlot` at `processed` commitment across Solami Private RPC, official Solana Mainnet-Beta public RPC, and secondary cluster mirrors.
+- **Solami Slot Lead Margin (`solamiAdvantageSlots`)**: Quantifies the real-time slot lead Solami maintains over public nodes, demonstrating earlier visibility into on-chain state changes.
+- **Response Latency Profiling**: Measures round-trip ping time per node, verifying sub-millisecond to low-millisecond response guarantees.
+- **Live UI & API Exposure**: Accessible via `GET /api/rpc-check` and visualized in real time on the Observatory Dashboard.
