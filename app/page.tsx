@@ -3279,8 +3279,26 @@ export default function Home() {
             </div>
           </button>
 
-          {/* Desktop Navigation Links with Nested Hover Dropdowns */}
           <nav className="hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
+            <a
+              href="https://sentry-doc.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#FF5A26] font-bold hover:underline flex items-center gap-1"
+            >
+              <span>Docs</span>
+            </a>
+            <a
+              href="/dashboard"
+              className="inline-flex h-9 items-center gap-2 border-2 border-[#121212] bg-[#121212] px-4 font-serif text-xs font-bold text-white rounded-full hover:bg-[#FF5A26] transition-colors shadow-[2px_2px_0px_#121212]"
+            >
+              <GraduationCap size={14} weight="bold" />
+              <span>Get Started</span>
+            </a>
+          </nav>
+
+          {/* Desktop Navigation Links with Nested Hover Dropdowns */}
+          <nav className="hidden">
             {/* Overview / Story */}
             <button
               onClick={() => navigateTo("home")}
@@ -3489,7 +3507,7 @@ export default function Home() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Academy Rank & Cluster Switcher */}
-            <div className="hidden md:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-2.5 py-1 font-mono text-xs font-semibold rounded-full shadow-[2px_2px_0px_#121212]">
+            <div className="hidden items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-2.5 py-1 font-mono text-xs font-semibold rounded-full shadow-[2px_2px_0px_#121212]">
               <span className="font-bold text-[#FF5A26] flex items-center gap-1">
                 <Trophy size={13} weight="bold" /> {rank.name}
               </span>
@@ -3522,7 +3540,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="hidden sm:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-xs font-semibold rounded-full">
+            <div className="hidden items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-xs font-semibold rounded-full">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>Mainnet</span>
               <span className="text-[#121212]/30 select-none">â€¢</span>
@@ -3535,7 +3553,7 @@ export default function Home() {
 
             <button
               onClick={() => (connected && disconnect ? disconnect() : undefined)}
-              className="inline-flex h-9 items-center gap-2 border-2 border-[#121212] bg-[#121212] px-3 sm:px-4 font-sans text-xs font-bold text-white rounded-full hover:bg-[#FF5A26] transition-colors"
+              className="hidden h-9 items-center gap-2 border-2 border-[#121212] bg-[#121212] px-3 sm:px-4 font-sans text-xs font-bold text-white rounded-full hover:bg-[#FF5A26] transition-colors"
             >
               <Wallet size={15} weight="bold" />
               <span>{walletShort}</span>
@@ -3554,119 +3572,22 @@ export default function Home() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t-2 border-[#121212] bg-[#FDFBF7] p-4 max-h-[80vh] overflow-y-auto space-y-4">
-            <div>
-              <button
-                onClick={() => navigateTo("home")}
-                className="block w-full text-left font-serif text-base font-bold text-[#121212] py-1 hover:text-[#FF5A26]"
-              >
-                â† Overview & Story
-              </button>
-            </div>
-
-            <div>
-              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Autonomous Engine</p>
-              <div className="mt-1 space-y-1">
-                <button
-                  onClick={() => navigateTo("autonomous", "#autonomous-health")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  System Health & Circuit Breaker
-                </button>
-                <button
-                  onClick={() => navigateTo("autonomous", "#autonomous-mode")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Execution Mode (Observe / Shadow / Live)
-                </button>
-                <button
-                  onClick={() => navigateTo("autonomous", "#autonomous-events")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Live Blur + Yellowstone Feed
-                </button>
-                <button
-                  onClick={() => navigateTo("autonomous", "#autonomous-receipts")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Execution Receipts & Provenance
-                </button>
-                <button
-                  onClick={() => navigateTo("autonomous", "#autonomous-lab")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Fault Injection Lab
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Mission Console</p>
-              <div className="mt-1 space-y-1">
-                <button
-                  onClick={() => navigateTo("console", "#mission-profiles")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Transaction Run Profiles
-                </button>
-                <button
-                  onClick={() => navigateTo("console", "#terminal")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Execution Stream Terminal
-                </button>
-                <button
-                  onClick={() => navigateTo("console", "#lifecycle")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Lifecycle Confirmation Stages
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <p className="font-mono text-xs font-bold uppercase text-[#FF5A26]">Intelligence & Proof</p>
-              <div className="mt-1 space-y-1">
-                <button
-                  onClick={() => navigateTo("intelligence", "#agent")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Groq AI Decision Trail
-                </button>
-                <button
-                  onClick={() => navigateTo("intelligence", "#evidence")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Evidence & Audit Logs
-                </button>
-                <button
-                  onClick={() => navigateTo("intelligence", "#stack")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  The Sentry 2.0 Stack
-                </button>
-                <button
-                  onClick={() => navigateTo("intelligence", "#intelligence-section")}
-                  className="block w-full text-left font-serif text-sm text-[#121212] py-1 hover:text-[#FF5A26]"
-                >
-                  Execution Tools & DEX
-                </button>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-[#121212]/10 flex items-center justify-between">
-              <span className="font-mono text-xs text-[#5A564F]">
-                Balance: {snapshot?.balanceSol != null ? `${snapshot.balanceSol.toFixed(4)} SOL` : "0.0019 SOL"}
-              </span>
-              <a
-                href="https://sentry-doc.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-serif text-xs font-bold text-[#FF5A26] hover:underline"
-              >
-                Docs â†—
-              </a>
-            </div>
+          <div className="lg:hidden border-t-2 border-[#121212] bg-[#FDFBF7] p-4 max-h-[80vh] overflow-y-auto space-y-3">
+            <a
+              href="/dashboard"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-[#121212] bg-[#FF5A26] px-4 font-serif text-sm font-bold text-white shadow-[2px_2px_0px_#121212]"
+            >
+              <GraduationCap size={15} weight="bold" />
+              Get Started
+            </a>
+            <a
+              href="https://sentry-doc.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-11 w-full items-center justify-center rounded-xl border-2 border-[#121212] bg-white px-4 font-serif text-sm font-bold text-[#FF5A26]"
+            >
+              Docs
+            </a>
           </div>
         )}
       </header>
@@ -3735,29 +3656,22 @@ export default function Home() {
 
               {/* CTA Row */}
               <div className="mt-8 flex flex-wrap items-center gap-4">
-                <button
-                  onClick={submitBundle}
-                  disabled={submitting || loading}
-                  className="inline-flex h-12 items-center gap-3 border-2 border-[#121212] bg-[#FFFFFF] px-6 font-serif text-base font-bold text-[#121212] hover:bg-[#121212] hover:text-[#FFFFFF] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <Play size={17} weight="fill" className="text-[#FF5A26]" />
-                  <span>{submitting ? "Executing..." : "Submit Bundle â†’"}</span>
-                </button>
-
                 <a
-                  href="#evidence"
-                  className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] px-5 font-serif text-sm font-semibold text-[#121212] hover:bg-[#FFFFFF] transition-colors"
+                  href="/dashboard"
+                  className="inline-flex h-12 items-center gap-3 border-2 border-[#121212] bg-[#FFFFFF] px-6 font-serif text-base font-bold text-[#121212] hover:bg-[#121212] hover:text-[#FFFFFF] transition-colors"
                 >
-                  <ArrowSquareOut size={16} weight="bold" />
-                  View Proof
+                  <GraduationCap size={17} weight="bold" className="text-[#FF5A26]" />
+                  <span>Start Training</span>
                 </a>
 
                 <a
-                  href="/api/evidence"
+                  href="https://sentry-doc.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] px-5 font-serif text-sm font-semibold text-[#121212] hover:bg-[#FFFFFF] transition-colors"
                 >
                   <ArrowSquareOut size={16} weight="bold" />
-                  Export JSON
+                  Read Docs
                 </a>
               </div>
             </div>
@@ -3948,8 +3862,50 @@ export default function Home() {
             <CheckeredBorder variant="solid" height={16} />
           </div>
 
-          {/* SENTRY ACADEMY: FOUNDATIONS TRACK (LESSONS 01 & 02 + LIVE LABS) */}
-          <AcademyTrackSection view="home" />
+          {/* TRAINING APP POSITIONING */}
+          <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] rounded-2xl p-6 sm:p-8 shadow-[4px_4px_0px_#121212]">
+              <div className="flex flex-wrap items-start justify-between gap-6 border-b-2 border-[#121212]/15 pb-6">
+                <div className="max-w-3xl">
+                  <span className="font-mono text-xs font-bold text-[#FF5A26] bg-[#FF5A26]/10 px-2.5 py-0.5 rounded uppercase tracking-wider">
+                    Technical Blockchain Training
+                  </span>
+                  <h2 className="mt-3 font-serif text-3xl sm:text-5xl font-black text-[#121212] leading-tight">
+                    From live tools to a guided execution academy.
+                  </h2>
+                  <p className="font-sans text-sm sm:text-base text-[#5A564F] mt-3 leading-relaxed">
+                    Sentry now teaches the mechanics behind reliable blockchain execution: slots, blockhashes, fees, confirmation, fault recovery, liquidity quotes, and multi-rail submission.
+                  </p>
+                </div>
+                <a
+                  href="/dashboard"
+                  className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] px-5 font-serif text-sm font-bold text-white rounded-xl hover:bg-[#E84D1C] transition-all shadow-[2px_2px_0px_#121212]"
+                >
+                  <GraduationCap size={15} weight="bold" />
+                  Open Dashboard
+                </a>
+              </div>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { icon: RadioTower, title: "Read state", body: "Understand slot timing, commitment, RPC freshness, and blockhash expiry." },
+                  { icon: Cpu, title: "Build safely", body: "Learn how signed transactions, simulation, fees, and tips fit together." },
+                  { icon: ShieldCheck, title: "Recover failures", body: "Classify faults and apply the correct recovery instead of blind retries." },
+                  { icon: Lightning, title: "Execute live", body: "Run Devnet labs against the existing backend and inspect real output." },
+                ].map((item) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <div key={item.title} className="border-2 border-[#121212]/15 bg-[#FFFFFF] p-4 rounded-xl">
+                      <div className="h-9 w-9 rounded-lg border-2 border-[#121212] bg-[#FF5A26] text-white flex items-center justify-center">
+                        <IconComponent size={16} weight="bold" />
+                      </div>
+                      <h3 className="mt-3 font-serif text-lg font-black text-[#121212]">{item.title}</h3>
+                      <p className="mt-2 font-sans text-xs sm:text-sm leading-relaxed text-[#5A564F]">{item.body}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
 
           {/* 5 ALTERNATING ZIG-ZAG EXPLAINER SECTIONS */}
           <ExplainerSections navigateTo={navigateTo} />
@@ -4943,7 +4899,7 @@ export default function Home() {
       )}
 
       {/* Floating Archival Field Notes Card with Cursive Quotes & Sandbox Cluster Switch */}
-      <FieldNoteCard view={activeView} />
+      {activeView !== "home" && <FieldNoteCard view={activeView} />}
 
     </main>
   );
