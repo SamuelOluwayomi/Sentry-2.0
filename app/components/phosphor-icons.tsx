@@ -221,3 +221,59 @@ export const Info = createIcon([
   { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
   { d: "M12 8h.01M12 12v4" },
 ]);
+
+// Academy icons (Phosphor-style outlines)
+export const GraduationCap = createIcon([
+  { d: "M2 9l10-5 10 5-10 5-10-5z" },
+  { d: "M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5" },
+  { d: "M22 9v6" },
+]);
+export const BookOpen = createIcon([
+  { d: "M12 6c-2-1.5-5-2-9-2v14c4 0 7 .5 9 2 2-1.5 5-2 9-2V4c-4 0-7 .5-9 2z" },
+  { d: "M12 6v14" },
+]);
+export const Star = createIcon([
+  { d: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3z" },
+]);
+export const Trophy = createIcon([
+  { d: "M7 4h10v5a5 5 0 0 1-10 0V4z" },
+  { d: "M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" },
+  { d: "M12 14v4M8 21h8M9 18h6" },
+]);
+export const Quotes = createIcon([
+  { d: "M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5a5 5 0 0 1-4 5" },
+  { d: "M19 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5a5 5 0 0 1-4 5" },
+]);
+export const Lightbulb = createIcon([
+  { d: "M9 18h6M10 21h4" },
+  { d: "M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" },
+]);
+export const Target = createIcon([
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 5 } },
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 1 } },
+]);
+export const Question = createIcon([
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
+  { d: "M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01" },
+]);
+export const Globe = createIcon([
+  { type: "circle", attrs: { cx: 12, cy: 12, r: 9 } },
+  { d: "M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z" },
+]);
+export const Drop = createIcon([{ d: "M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z" }]);
+export const NotePencil = createIcon([
+  { d: "M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" },
+  { d: "M13.5 7.5l3 3" },
+]);
+export const Minus = createIcon([{ d: "M5 12h14" }]);
+export const Path = createIcon([
+  { type: "circle", attrs: { cx: 6, cy: 18, r: 2 } },
+  { type: "circle", attrs: { cx: 18, cy: 6, r: 2 } },
+  { d: "M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6" },
+]);
+export const Coins = createIcon([
+  { d: "M4 7c0-1.7 2.7-3 6-3s6 1.3 6 3-2.7 3-6 3-6-1.3-6-3z" },
+  { d: "M4 7v4c0 1.7 2.7 3 6 3s6-1.3 6-3V7" },
+  { d: "M8 14.8V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-4c0-1.6-2.4-2.9-5.5-3" },
+]);

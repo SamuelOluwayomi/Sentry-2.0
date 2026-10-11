@@ -695,9 +695,9 @@ function getGroqModels() {
   }
 
   return [
-    env("GROQ_MODEL_PRIMARY") ?? "openai/gpt-oss-20b",
-    env("GROQ_MODEL_BACKUP") ?? "qwen/qwen3.8-27b",
-    env("GROQ_MODEL_TERTIARY") ?? "openai/gpt-oss-120b",
+    env("GROQ_MODEL_PRIMARY") ?? "llama-3.3-70b-versatile",
+    env("GROQ_MODEL_BACKUP") ?? "llama-3.1-8b-instant",
+    env("GROQ_MODEL_TERTIARY") ?? "mixtral-8x7b-32768",
   ].filter(Boolean);
 }
 
@@ -904,7 +904,11 @@ async function getAgentDecision(
     reason: spendableLamports >= input.baseTipLamports
       ? "All Groq attempts failed; local policy used live tip floor."
       : `Wallet balance (${(input.balanceLamports / 1e9).toFixed(6)} SOL) is near rent-exempt floor (${SOLANA_RENT_EXEMPT_RESERVE} lamports). Top-up required.`,
-    observed_risk: spendableLamports >= input.baseTipLamports ? (lastError || "Groq model chain unavailable") : "Insufficient spendable lamports for rent exemption",
+    observed_risk: spendableLamports >= input.baseTipLamports
+      ? (lastError.includes("{") || lastError.includes("400")
+          ? "AI Provider Schema Error (Fallback Active)"
+          : (lastError || "Groq model chain unavailable"))
+      : "Insufficient spendable lamports for rent exemption",
   });
 }
 

@@ -1,9 +1,7 @@
-// Sentry 2.0 -- Yellowstone gRPC TypeScript Client
+﻿// Sentry 2.0 -- Yellowstone gRPC TypeScript Client
 // Connects to Solami Yellowstone gRPC firehose and feeds real confirmed
 // transactions into the event engine as canonical SentryEvents.
 
-import Client, { CommitmentLevel } from '@triton-one/yellowstone-grpc';
-import type { SubscribeRequestFilterTransactions } from '@triton-one/yellowstone-grpc';
 import { EventEmitter } from 'node:events';
 import { fromYellowstoneMessage } from './event-engine';
 import type { SentryEvent } from './types';
@@ -54,12 +52,29 @@ async function connectWithRetry(): Promise<void> {
 }
 
 async function connectStream(endpoint: string, token: string): Promise<void> {
-  const client = new Client(endpoint, token, {});
+  let grpcMod: any = null;
+  try {
+    grpcMod = await import('@triton-one/yellowstone-grpc');
+  } catch (loadErr) {
+    _streamHealthy = false;
+    yellowstoneEmitter.emit('health', false);
+    console.warn('[Yellowstone] Native gRPC addon not available. Operating in WebSocket/RPC mode:', loadErr instanceof Error ? loadErr.message : String(loadErr));
+    return;
+  }
 
+  const ClientConstructor = grpcMod?.default || grpcMod;
+  if (!ClientConstructor) {
+    _streamHealthy = false;
+    yellowstoneEmitter.emit('health', false);
+    return;
+  }
+
+  const commitmentConfirmed = grpcMod?.CommitmentLevel?.CONFIRMED ?? 1;
+  const client = new ClientConstructor(endpoint, token, {});
   const stream = await client.subscribe();
 
   return new Promise<void>((resolve, reject) => {
-    const txFilter: SubscribeRequestFilterTransactions = {
+    const txFilter = {
       vote: false,
       failed: false,
       signature: undefined,
@@ -76,7 +91,7 @@ async function connectStream(endpoint: string, token: string): Promise<void> {
       entry: {},
       blocks: {},
       blocksMeta: {},
-      commitment: CommitmentLevel.CONFIRMED,
+      commitment: commitmentConfirmed,
       accountsDataSlice: [],
       ping: undefined,
     }, (err?: Error | null) => {
@@ -86,7 +101,7 @@ async function connectStream(endpoint: string, token: string): Promise<void> {
     _streamHealthy = true;
     reconnectAttempts = 0;
     yellowstoneEmitter.emit('health', true);
-    console.log('[Yellowstone] gRPC stream ACTIVE —', endpoint);
+    console.log('[Yellowstone] gRPC stream ACTIVE ->', endpoint);
 
     stream.on('data', (data: Record<string, unknown>) => {
       try {
@@ -110,7 +125,7 @@ async function connectStream(endpoint: string, token: string): Promise<void> {
           const event: SentryEvent | null = fromYellowstoneMessage(raw, slot);
           if (event) yellowstoneEmitter.emit('event', event);
         } else if (data.ping) {
-          stream.write({ ping: { id: 1 } } as unknown as Parameters<typeof stream.write>[0], () => {});
+          stream.write({ ping: { id: 1 } }, () => {});
         }
       } catch { /* non-fatal */ }
     });
@@ -124,7 +139,7 @@ async function connectStream(endpoint: string, token: string): Promise<void> {
     stream.on('end', () => {
       _streamHealthy = false;
       yellowstoneEmitter.emit('health', false);
-      console.warn('[Yellowstone] Stream ended — will reconnect');
+      console.warn('[Yellowstone] Stream ended -- will reconnect');
       resolve();
     });
 

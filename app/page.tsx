@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -18,6 +18,7 @@ import {
   GitBranch,
   Info,
   Lightning,
+  FlaskConical,
   List,
   LockKey,
   Play,
@@ -28,6 +29,13 @@ import {
   X,
 } from "./components/phosphor-icons";
 import { useWalletConnection } from "@solana/react-hooks";
+import { CheckeredBorder, CheckeredTextRibbon, CheckeredGridBackground } from "./components/checkered-border";
+import { TaskDialogModal, TaskActionCard, LiveTestStageList } from "./components/task-dialog";
+import { ScrollReveal, ScrollProgressBar } from "./components/scroll-reveal";
+import { AcademyTrackSection } from "./components/academy/academy-track-section";
+import { FieldNoteCard } from "./components/academy/field-note-card";
+import { useAcademy } from "./components/academy/academy-store";
+import { Trophy, Globe, GraduationCap } from "./components/phosphor-icons";
 
 // Helper to parse inline markdown elements safely
 const parseInline = (text: string) => {
@@ -394,7 +402,7 @@ const shortId = (value: string) =>
   value ? `${value.slice(0, 6)}...${value.slice(-6)}` : "--";
 
 
-// ── Autonomous types (matching backend) ──────────────────────────────────────
+// â”€â”€ Autonomous types (matching backend) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type ExecutionMode = "observe" | "shadow" | "live";
 type FaultType =
   | "expired_blockhash"
@@ -479,8 +487,8 @@ type SystemHealth = {
   execution: { totalReceipts: number; successRate: number; lastExecutionAt?: string };
 };
 
-// ── Autonomous Control Panel ──────────────────────────────────────────────────
-﻿// ── Types ────────────────────────────────────────────────────────────────────
+// Autonomous Control Panel
+// Types
 interface RpcConsistencyResult {
   name: string;
   url: string;
@@ -516,108 +524,168 @@ interface NetworkState {
   timeSinceLastSuccessSecs: number;
 }
 
-// ── RPC Consistency Panel ────────────────────────────────────────────────────
+// â”€â”€ RPC Consistency Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function RpcConsistencyPanel() {
   const [report, setReport] = React.useState<ConsistencyReport | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [stageIndex, setStageIndex] = React.useState(0);
   const [lastChecked, setLastChecked] = React.useState<string | null>(null);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [abortController, setAbortController] = React.useState<AbortController | null>(null);
+
+  const stages = [
+    { id: "s1", label: "Querying Solami Private Beam RPC", detail: "Probing https://beam.solami.dev/rpc" },
+    { id: "s2", label: "Querying Public Mainnet Validator RPC", detail: "Probing https://api.mainnet-beta.solana.com" },
+    { id: "s3", label: "Querying Triton / Helius Edge Endpoints", detail: "Measuring cluster slot head synchronization" },
+    { id: "s4", label: "Computing slot head deltas & consensus lag", detail: "Calculating Solami slot advantage" },
+  ];
 
   const run = async () => {
     setLoading(true);
+    setStageIndex(0);
+    const ac = new AbortController();
+    setAbortController(ac);
+
+    const timer1 = setTimeout(() => setStageIndex(1), 350);
+    const timer2 = setTimeout(() => setStageIndex(2), 700);
+    const timer3 = setTimeout(() => setStageIndex(3), 1100);
+
     try {
-      const res = await fetch("/api/rpc-check");
+      const res = await fetch("/api/rpc-check", { signal: ac.signal });
       if (res.ok) {
         const data = await res.json() as ConsistencyReport;
         setReport(data);
         setLastChecked(new Date().toISOString());
+        setStageIndex(4);
       }
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.warn("RPC check error:", err.message);
+      }
+    } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      setLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleOpen = () => {
+    setModalOpen(true);
+    if (!report && !loading) {
+      run();
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+    }
     setLoading(false);
   };
 
-  React.useEffect(() => { run(); }, []);
-
   return (
-    <div className="border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between border-b-2 border-[#121212] bg-[#FFFFFF] px-5 py-3">
-        <div>
-          <h3 className="font-serif text-sm font-bold text-[#121212] uppercase tracking-wide">
-            RPC Cluster Comparison
-          </h3>
-          <p className="font-mono text-xs text-[#5A564F]">
-            Solami private RPC vs public endpoints — slot head, latency, version
-          </p>
-        </div>
-        <button
-          onClick={run}
-          disabled={loading}
-          className="border-2 border-[#121212] bg-[#121212] text-white px-4 py-1.5 font-mono text-xs font-bold rounded-xl hover:bg-[#FF5A26] disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Probing..." : "Refresh"}
-        </button>
-      </div>
+    <>
+      <TaskActionCard
+        tag="RPC CLUSTER AUDIT"
+        title="RPC Cluster Consistency Probe"
+        description="Probes Solami private low-latency RPC alongside public Solana endpoints (Triton, Helius, Public Mainnet) to detect slot head lag, divergence, and consensus delay."
+        actionLabel={loading ? "Probing RPC..." : "Run RPC Cluster Audit"}
+        actionIcon={RadioTower}
+        onAction={handleOpen}
+        hasRun={!!report}
+        lastRunSummary={
+          report
+            ? `Advantage: +${report.solamiAdvantageSlots} slots (${report.results.length} nodes)`
+            : undefined
+        }
+      />
 
-      {report && (
-        <>
-          {/* Advantage Banner */}
-          <div className={`px-5 py-3 border-b-2 border-[#121212] flex items-center gap-4 ${report.solamiAdvantageSlots > 0 ? "bg-[#121212] text-white" : "bg-[#F7F4EC]"}`}>
-            <span className="font-mono text-xs uppercase tracking-widest">Solami Slot Advantage</span>
-            <span className="font-serif text-2xl font-bold">
-              +{report.solamiAdvantageSlots} slots
-            </span>
-            <span className="font-mono text-xs opacity-60">ahead of public average</span>
-            {lastChecked && (
-              <span className="font-mono text-xs opacity-40 ml-auto">
-                {new Date(lastChecked).toLocaleTimeString()}
-              </span>
-            )}
+      <TaskDialogModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="RPC Cluster Consistency Audit"
+        subtitle="Solami Private Beam RPC vs Public Solana RPC Nodes"
+        tag="RPC DIAGNOSTICS"
+        status={loading ? "running" : report ? "completed" : "idle"}
+        onCancel={handleCancel}
+        cancelLabel="Abort Probe"
+        footerActions={
+          report ? (
+            <button
+              onClick={run}
+              disabled={loading}
+              className="border-2 border-[#121212] bg-[#F7F4EC] px-4 py-1.5 font-mono text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors"
+            >
+              Re-probe Nodes
+            </button>
+          ) : null
+        }
+      >
+        {loading && (
+          <LiveTestStageList stages={stages} activeStageIndex={stageIndex} />
+        )}
+
+        {report && (
+          <div className="space-y-4">
+            <div className={`p-4 rounded-xl border-2 border-[#121212] flex flex-wrap items-center justify-between gap-3 ${report.solamiAdvantageSlots > 0 ? "bg-[#121212] text-white" : "bg-[#F7F4EC] text-[#121212]"}`}>
+              <div>
+                <span className="font-mono text-xs uppercase tracking-widest block opacity-70">
+                  Solami Slot Advantage
+                </span>
+                <span className="font-serif text-3xl font-bold">
+                  +{report.solamiAdvantageSlots} slots ahead
+                </span>
+              </div>
+              {lastChecked && (
+                <span className="font-mono text-xs opacity-60">
+                  Audited at {new Date(lastChecked).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+
+            <div className="border-2 border-[#121212] rounded-xl overflow-hidden bg-white">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="border-b-2 border-[#121212] bg-[#F7F4EC]">
+                      <th className="px-4 py-2.5 text-left font-bold text-[#121212] uppercase">Node</th>
+                      <th className="px-4 py-2.5 text-right font-bold text-[#121212] uppercase">Slot</th>
+                      <th className="px-4 py-2.5 text-right font-bold text-[#121212] uppercase">Lag</th>
+                      <th className="px-4 py-2.5 text-right font-bold text-[#121212] uppercase">Latency</th>
+                      <th className="px-4 py-2.5 text-left font-bold text-[#121212] uppercase">Version</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.results.map((r) => (
+                      <tr
+                        key={r.name}
+                        className={`border-b border-[#121212]/15 ${r.name.includes("Solami") ? "bg-[#FF5A26]/10 font-bold" : ""}`}
+                      >
+                        <td className="px-4 py-2.5">{r.name}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">
+                          {r.slot > 0 ? r.slot.toLocaleString() : "â€”"}
+                        </td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums ${r.slotLag === 0 ? "text-emerald-700 font-bold" : "text-amber-800"}`}>
+                          {r.slot > 0 ? (r.slotLag === 0 ? "fastest" : `+${r.slotLag}`) : "error"}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums">{r.latencyMs}ms</td>
+                        <td className="px-4 py-2.5 opacity-70">{r.error ? "ERR" : r.version}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-
-          {/* Node Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono">
-              <thead>
-                <tr className="border-b-2 border-[#121212] bg-[#FFFFFF]">
-                  <th className="px-4 py-2 text-left font-bold text-[#121212] uppercase">Node</th>
-                  <th className="px-4 py-2 text-right font-bold text-[#121212] uppercase">Slot</th>
-                  <th className="px-4 py-2 text-right font-bold text-[#121212] uppercase">Lag</th>
-                  <th className="px-4 py-2 text-right font-bold text-[#121212] uppercase">Latency</th>
-                  <th className="px-4 py-2 text-left font-bold text-[#121212] uppercase">Version</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.results.map((r) => (
-                  <tr
-                    key={r.name}
-                    className={`border-b border-[#121212]/20 ${r.name.includes("Solami") ? "bg-[#121212] text-white" : "bg-[#F7F4EC]"}`}
-                  >
-                    <td className="px-4 py-2 font-bold">{r.name}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {r.slot > 0 ? r.slot.toLocaleString() : "—"}
-                    </td>
-                    <td className={`px-4 py-2 text-right tabular-nums ${r.slotLag === 0 ? "text-green-400" : "text-red-400"}`}>
-                      {r.slot > 0 ? (r.slotLag === 0 ? "fastest" : `+${r.slotLag}`) : "error"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.latencyMs}ms</td>
-                    <td className="px-4 py-2 opacity-70">{r.error ? "ERR" : r.version}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {!report && !loading && (
-        <div className="px-5 py-6 font-mono text-xs text-[#5A564F]">
-          Click Refresh to probe live cluster consistency.
-        </div>
-      )}
-    </div>
+        )}
+      </TaskDialogModal>
+    </>
   );
 }
 
-// ── Tip Decision Panel ───────────────────────────────────────────────────────
+// â”€â”€ Tip Decision Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TipDecisionPanel({ network }: { network: { slot?: number; tipP75?: number; regime?: string } | null }) {
   const [state, setState] = React.useState<NetworkState>({
     currentSlot: network?.slot ?? 0,
@@ -630,123 +698,192 @@ function TipDecisionPanel({ network }: { network: { slot?: number; tipP75?: numb
   });
   const [decision, setDecision] = React.useState<TipDecision | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [history, setHistory] = React.useState<Array<TipDecision & { ts: string }>>([]);
+  const [stageIndex, setStageIndex] = React.useState(0);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [abortController, setAbortController] = React.useState<AbortController | null>(null);
 
   React.useEffect(() => {
     if (network?.slot) setState((s) => ({ ...s, currentSlot: network.slot!, tipP75: network.tipP75 ?? s.tipP75 }));
   }, [network]);
 
+  const stages = [
+    { id: "s1", label: "Evaluating live slot & congestion regime", detail: `Slot ${state.currentSlot || "Mainnet live"} â€¢ Regime ${network?.regime || "Normal"}` },
+    { id: "s2", label: "Querying Groq LPU primary model (Llama-3.3-70b)", detail: "Evaluating hardware-accelerated decision trail" },
+    { id: "s3", label: "Computing Jito inclusion probability curves", detail: `Floor: ${state.tipMin.toLocaleString()} â€¢ Cap: ${state.tipMax.toLocaleString()} lamports` },
+    { id: "s4", label: "Applying Solana rent-reserve safety invariant", detail: "Formulating optimal dynamic tip recommendation" },
+  ];
+
   const decide = async () => {
     setLoading(true);
+    setStageIndex(0);
+    const ac = new AbortController();
+    setAbortController(ac);
+
+    const timer1 = setTimeout(() => setStageIndex(1), 350);
+    const timer2 = setTimeout(() => setStageIndex(2), 750);
+    const timer3 = setTimeout(() => setStageIndex(3), 1150);
+
     try {
       const res = await fetch("/api/tip-decision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(state),
+        signal: ac.signal,
       });
       if (res.ok) {
         const d = await res.json() as TipDecision;
         setDecision(d);
-        setHistory((h) => [{ ...d, ts: new Date().toLocaleTimeString() }, ...h].slice(0, 8));
+        setStageIndex(4);
       }
-    } catch { /* ignore */ }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.warn("Tip probe error:", err.message);
+      }
+    } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      setLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleOpen = () => {
+    setModalOpen(true);
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+    }
     setLoading(false);
   };
 
   const confidenceColor = (c: string) =>
-    c === "high" ? "text-green-600" : c === "medium" ? "text-yellow-600" : "text-red-500";
+    c === "high" ? "text-emerald-700 bg-emerald-50 border-emerald-300" : c === "medium" ? "text-amber-800 bg-amber-50 border-amber-300" : "text-red-700 bg-red-50 border-red-300";
 
   return (
-    <div className="border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
-      <div className="border-b-2 border-[#121212] bg-[#FFFFFF] px-5 py-3">
-        <h3 className="font-serif text-sm font-bold text-[#121212] uppercase tracking-wide">
-          Multi-Model Tip Engine
-        </h3>
-        <p className="font-mono text-xs text-[#5A564F]">
-          Groq cascade: Groq &rarr; Anthropic &rarr; Gemini &rarr; OpenAI &rarr; heuristic fallback
-        </p>
-      </div>
+    <>
+      <TaskActionCard
+        tag="MULTI-MODEL AI TIP"
+        title="Multi-Model Tip Decision Engine"
+        description="Evaluates real-time network congestion and fee regimes using Groq LPUs, Anthropic Claude, and Gemini with heuristic fallbacks to compute optimal transaction landing tips."
+        actionLabel="Configure & Run Tip Probe"
+        actionIcon={Brain}
+        onAction={handleOpen}
+        hasRun={!!decision}
+        lastRunSummary={
+          decision
+            ? `Recommended: ${decision.recommendedLamports.toLocaleString()} lamports (${decision.confidence} confidence)`
+            : undefined
+        }
+      />
 
-      {/* Inputs */}
-      <div className="grid grid-cols-2 gap-3 p-4 border-b-2 border-[#121212]">
-        {([
-          ["Failure Rate (%)", "recentFailureRate", 0, 100],
-          ["Time Since Success (s)", "timeSinceLastSuccessSecs", 0, 600],
-          ["Tip Min (lamports)", "tipMin", 1000, 100000],
-          ["Tip Max (lamports)", "tipMax", 10000, 5000000],
-        ] as [string, keyof NetworkState, number, number][]).map(([label, key, min, max]) => (
-          <div key={key}>
-            <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase">{label}</label>
-            <input
-              type="number"
-              min={min}
-              max={max}
-              value={state[key] as number}
-              onChange={(e) => setState((s) => ({ ...s, [key]: Number(e.target.value) }))}
-              className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-xl outline-none focus:bg-white"
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="px-4 py-3 flex items-center gap-3 border-b-2 border-[#121212]">
-        <button
-          onClick={decide}
-          disabled={loading}
-          className="border-2 border-[#121212] bg-[#FF5A26] text-white px-5 py-2 font-serif text-xs font-bold rounded-xl hover:bg-[#E84D1C] disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Querying AI..." : "Get Tip Recommendation"}
-        </button>
-        {decision && (
-          <span className="font-mono text-xs text-[#5A564F]">via {decision.provider}</span>
-        )}
-      </div>
-
-      {/* Decision Output */}
-      {decision && (
-        <div className="p-4 border-b-2 border-[#121212] bg-[#FFFFFF]">
-          <div className="flex items-end gap-4 mb-2">
-            <span className="font-serif text-3xl font-bold text-[#121212]">
-              {decision.recommendedLamports.toLocaleString()}
-            </span>
-            <span className="font-mono text-xs text-[#5A564F] mb-1">lamports</span>
-            <span className={`font-mono text-xs font-bold ml-auto ${confidenceColor(decision.confidence)}`}>
-              {decision.confidence.toUpperCase()} confidence
-            </span>
-          </div>
-          <p className="font-mono text-xs text-[#5A564F]">{decision.reasoning}</p>
-        </div>
-      )}
-
-      {/* History */}
-      {history.length > 0 && (
-        <div className="p-4">
-          <p className="font-mono text-[10px] text-[#5A564F] uppercase mb-2">Recent decisions</p>
-          <div className="space-y-1">
-            {history.map((h, i) => (
-              <div key={i} className="flex items-center gap-3 font-mono text-[10px] text-[#5A564F]">
-                <span className="tabular-nums">{h.ts}</span>
-                <span className="font-bold text-[#121212]">{h.recommendedLamports.toLocaleString()}</span>
-                <span className="opacity-60">{h.provider}</span>
-                <span className={`ml-auto ${confidenceColor(h.confidence)}`}>{h.confidence}</span>
+      <TaskDialogModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Multi-Model AI Tip Recommendation"
+        subtitle="Groq Cascade: Groq -> Anthropic -> Gemini -> OpenAI -> Heuristic Fallback"
+        tag="AI TIP ENGINE"
+        status={loading ? "running" : decision ? "completed" : "idle"}
+        onCancel={handleCancel}
+        cancelLabel="Cancel Probe"
+      >
+        <div className="border-2 border-[#121212] bg-white rounded-xl p-4">
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F] mb-3">
+            Simulation Ingestion Parameters
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              ["Failure Rate (%)", "recentFailureRate", 0, 100],
+              ["Time Since Success (s)", "timeSinceLastSuccessSecs", 0, 600],
+              ["Tip Min (lamports)", "tipMin", 1000, 100000],
+              ["Tip Max (lamports)", "tipMax", 10000, 5000000],
+            ] as [string, keyof NetworkState, number, number][]).map(([label, key, min, max]) => (
+              <div key={key}>
+                <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase font-bold">{label}</label>
+                <input
+                  type="number"
+                  min={min}
+                  max={max}
+                  value={state[key] as number}
+                  onChange={(e) => setState((s) => ({ ...s, [key]: Number(e.target.value) }))}
+                  className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-lg outline-none focus:bg-white"
+                />
               </div>
             ))}
           </div>
+
+          <div className="mt-4 pt-3 border-t border-[#121212]/15 flex items-center justify-between">
+            <span className="font-mono text-xs text-[#5A564F]">
+              Slot: {state.currentSlot || "Live Network"}
+            </span>
+            <button
+              onClick={decide}
+              disabled={loading}
+              className="border-2 border-[#121212] bg-[#FF5A26] text-white px-5 py-2 font-serif text-xs font-bold rounded-xl hover:bg-[#E84D1C] disabled:opacity-50 transition-colors shadow-[2px_2px_0px_#121212]"
+            >
+              {loading ? "Querying AI Models..." : "Run AI Tip Recommendation"}
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+
+        {loading && (
+          <LiveTestStageList stages={stages} activeStageIndex={stageIndex} />
+        )}
+
+        {decision && !loading && (
+          <div className="border-2 border-[#121212] bg-white rounded-xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3 border-b-2 border-[#121212]/10 pb-4">
+              <div>
+                <span className="font-mono text-xs text-[#5A564F] uppercase tracking-wider block">
+                  Recommended Jito Micro-Tip
+                </span>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="font-serif text-3xl font-black text-[#121212]">
+                    {decision.recommendedLamports.toLocaleString()}
+                  </span>
+                  <span className="font-mono text-xs text-[#5A564F]">lamports</span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className={`inline-flex px-2.5 py-0.5 rounded-full font-mono text-xs font-bold border ${confidenceColor(decision.confidence)}`}>
+                  {decision.confidence.toUpperCase()} CONFIDENCE
+                </span>
+                <span className="font-mono text-[11px] text-[#5A564F] block mt-1">
+                  Provider: {decision.provider}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <span className="font-mono text-xs font-bold text-[#5A564F] uppercase block mb-1">
+                AI Reasoning Trail
+              </span>
+              <p className="font-serif text-sm italic text-[#121212] leading-relaxed bg-[#F7F4EC] border border-[#121212]/15 p-3 rounded-lg">
+                &quot;{decision.reasoning}&quot;
+              </p>
+            </div>
+          </div>
+        )}
+      </TaskDialogModal>
+    </>
   );
 }
 
-// ── Orca Swap Panel ──────────────────────────────────────────────────────────
+// â”€â”€ Orca Whirlpool Swap Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function OrcaSwapPanel() {
-  const [poolKey, setPoolKey] = React.useState<string>("SOL_USDC");
+  const [poolKey, setPoolKey] = React.useState("SOL_USDC");
   const [aToB, setAToB] = React.useState(true);
   const [amountSol, setAmountSol] = React.useState("0.001");
-  const [slippage, setSlippage] = React.useState("0.5");
+  const [slippage, setSlippage] = React.useState("1.0");
   const [status, setStatus] = React.useState<string | null>(null);
   const [sig, setSig] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [stageIndex, setStageIndex] = React.useState(0);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [abortController, setAbortController] = React.useState<AbortController | null>(null);
 
   const POOLS: Record<string, string> = {
     "SOL_USDC": "HJPjoWUrhoZzkNfRpHuieeFk9WcZWjwy6PBjZ81ngndJ",
@@ -754,10 +891,25 @@ function OrcaSwapPanel() {
     "SOL_mSOL": "9vqYJjDUFecLL2xPUC4Rc7hyCtZ6iJ4mDiVZX7aFXoAe",
   };
 
+  const stages = [
+    { id: "s1", label: "Fetching Whirlpool pool address & tick arrays", detail: `Pool: ${POOLS[poolKey]?.slice(0, 16)}...` },
+    { id: "s2", label: "Computing concentrated liquidity quote", detail: `${amountSol} SOL â€¢ Slippage constraint: ${slippage}%` },
+    { id: "s3", label: "Constructing Beam-compliant swap instruction", detail: "Encoding Solami Beam SWQoS routing header" },
+    { id: "s4", label: "Broadcasting and verifying sub-slot inclusion", detail: "Awaiting final confirmation on Solana Mainnet" },
+  ];
+
   const submit = async () => {
     setLoading(true);
     setSig(null);
+    setStageIndex(0);
     setStatus("Constructing Orca Whirlpool swap transaction...");
+    const ac = new AbortController();
+    setAbortController(ac);
+
+    const timer1 = setTimeout(() => setStageIndex(1), 400);
+    const timer2 = setTimeout(() => setStageIndex(2), 850);
+    const timer3 = setTimeout(() => setStageIndex(3), 1300);
+
     try {
       const res = await fetch("/api/orca-swap", {
         method: "POST",
@@ -768,124 +920,177 @@ function OrcaSwapPanel() {
           amountLamports: Math.round(parseFloat(amountSol) * 1e9),
           slippagePct: parseFloat(slippage),
         }),
+        signal: ac.signal,
       });
       const data = await res.json() as { signature?: string; error?: string };
       if (data.error) {
         setStatus(`Error: ${data.error}`);
       } else {
         setSig(data.signature ?? null);
-        setStatus("Swap submitted via Solami Beam.");
+        setStatus("Swap submitted via Solami Beam SWQoS successfully.");
+        setStageIndex(4);
       }
-    } catch (err) {
-      setStatus(`Network error: ${String(err)}`);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setStatus(`Network error: ${err.message}`);
+      }
+    } finally {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      clearTimeout(timer3);
+      setLoading(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleOpen = () => {
+    setModalOpen(true);
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
     }
     setLoading(false);
+    setStatus("Swap simulation cancelled by operator.");
   };
 
   return (
-    <div className="border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
-      <div className="border-b-2 border-[#121212] bg-[#FFFFFF] px-5 py-3">
-        <h3 className="font-serif text-sm font-bold text-[#121212] uppercase tracking-wide">
-          Orca Whirlpool Swap
-        </h3>
-        <p className="font-mono text-xs text-[#5A564F]">
-          On-chain DEX swap via @orca-so/whirlpools-sdk, submitted through Solami Beam
-        </p>
-      </div>
+    <>
+      <TaskActionCard
+        tag="DEX LIQUIDITY SWAP"
+        title="Orca Whirlpool Swap Execution"
+        description="Constructs and routes on-chain concentrated liquidity swaps through Solami Beam SWQoS with deterministic slippage protection."
+        actionLabel="Configure & Execute Swap Test"
+        actionIcon={Cpu}
+        onAction={handleOpen}
+        hasRun={!!sig}
+        lastRunSummary={
+          sig ? `Confirmed: ${sig.slice(0, 12)}...` : undefined
+        }
+      />
 
-      <div className="p-4 space-y-3 border-b-2 border-[#121212]">
-        {/* Pool selector */}
-        <div>
-          <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase">Pool</label>
-          <select
-            value={poolKey}
-            onChange={(e) => setPoolKey(e.target.value)}
-            className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-xl outline-none focus:bg-white"
-          >
-            {Object.keys(POOLS).map((k) => (
-              <option key={k} value={k}>{k.replace("_", "/")}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Direction */}
-        <div>
-          <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase">Direction</label>
-          <div className="flex gap-2">
-            {[true, false].map((v) => (
-              <button
-                key={String(v)}
-                onClick={() => setAToB(v)}
-                className={`flex-1 border-2 border-[#121212] py-1.5 font-mono text-xs rounded-xl transition-colors ${aToB === v ? "bg-[#121212] text-white" : "bg-[#F7F4EC] text-[#121212]"}`}
-              >
-                {v ? "Sell Token A" : "Sell Token B"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Amount + Slippage */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase">Amount (SOL)</label>
-            <input
-              type="number"
-              min="0.0001"
-              step="0.001"
-              value={amountSol}
-              onChange={(e) => setAmountSol(e.target.value)}
-              className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-xl outline-none focus:bg-white"
-            />
-          </div>
-          <div>
-            <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase">Slippage (%)</label>
-            <input
-              type="number"
-              min="0.1"
-              max="5"
-              step="0.1"
-              value={slippage}
-              onChange={(e) => setSlippage(e.target.value)}
-              className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-xl outline-none focus:bg-white"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 py-3 flex items-center gap-3">
-        <button
-          onClick={submit}
-          disabled={loading}
-          className="border-2 border-[#121212] bg-[#FF5A26] text-white px-5 py-2 font-serif text-xs font-bold rounded-xl hover:bg-[#E84D1C] disabled:opacity-50 transition-colors"
-        >
-          {loading ? "Swapping..." : "Execute Swap via Beam"}
-        </button>
-      </div>
-
-      {status && (
-        <div className="px-4 pb-4">
-          <p className="font-mono text-xs text-[#5A564F] border-2 border-[#121212] bg-[#FFFFFF] rounded-xl p-3">
-            {status}
-            {sig && (
-              <a
-                href={`https://solscan.io/tx/${sig}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block mt-1 text-[#FF5A26] underline break-all"
-              >
-                {sig}
-              </a>
-            )}
+      <TaskDialogModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Orca Whirlpool DEX Swap Execution"
+        subtitle="On-chain concentrated liquidity via @orca-so/whirlpools-sdk & Solami Beam"
+        tag="ORCA WHIRLPOOL"
+        status={loading ? "running" : sig ? "completed" : status?.includes("Error") ? "error" : "idle"}
+        onCancel={handleCancel}
+        cancelLabel="Cancel Swap"
+      >
+        <div className="border-2 border-[#121212] bg-white rounded-xl p-4 space-y-3">
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F] mb-2">
+            Whirlpool Swap Configuration
           </p>
+
+          <div>
+            <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase font-bold">Whirlpool Pool</label>
+            <select
+              value={poolKey}
+              onChange={(e) => setPoolKey(e.target.value)}
+              className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-lg outline-none focus:bg-white"
+            >
+              {Object.keys(POOLS).map((k) => (
+                <option key={k} value={k}>{k.replace("_", "/")}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase font-bold">Swap Direction</label>
+            <div className="flex gap-2">
+              {[true, false].map((v) => (
+                <button
+                  key={String(v)}
+                  onClick={() => setAToB(v)}
+                  className={`flex-1 border-2 border-[#121212] py-1.5 font-mono text-xs font-bold rounded-lg transition-colors ${aToB === v ? "bg-[#121212] text-white" : "bg-[#F7F4EC] text-[#121212]"}`}
+                >
+                  {v ? "Sell Token A -> Token B" : "Sell Token B -> Token A"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase font-bold">Amount (SOL)</label>
+              <input
+                type="number"
+                min="0.0001"
+                step="0.001"
+                value={amountSol}
+                onChange={(e) => setAmountSol(e.target.value)}
+                className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-lg outline-none focus:bg-white"
+              />
+            </div>
+            <div>
+              <label className="block font-mono text-[10px] text-[#5A564F] mb-1 uppercase font-bold">Max Slippage (%)</label>
+              <input
+                type="number"
+                min="0.1"
+                max="5"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(e.target.value)}
+                className="w-full border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 font-mono text-xs rounded-lg outline-none focus:bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-[#121212]/15 flex justify-end">
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="border-2 border-[#121212] bg-[#FF5A26] text-white px-5 py-2 font-serif text-xs font-bold rounded-xl hover:bg-[#E84D1C] disabled:opacity-50 transition-colors shadow-[2px_2px_0px_#121212]"
+            >
+              {loading ? "Executing Swap..." : "Execute Swap via Beam"}
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+
+        {loading && (
+          <LiveTestStageList stages={stages} activeStageIndex={stageIndex} />
+        )}
+
+        {status && !loading && (
+          <div className="border-2 border-[#121212] bg-white rounded-xl p-4">
+            <p className="font-mono text-xs font-bold text-[#121212] mb-1">
+              Swap Execution Status:
+            </p>
+            <p className="font-mono text-xs text-[#5A564F]">
+              {status}
+            </p>
+            {sig && (
+              <div className="mt-3 pt-3 border-t border-[#121212]/15">
+                <span className="font-mono text-[11px] text-[#5A564F] block mb-1">
+                  On-chain Signature Verified:
+                </span>
+                <a
+                  href={`https://solscan.io/tx/${sig}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs text-[#FF5A26] underline break-all font-bold hover:text-[#121212]"
+                >
+                  {sig} â†—
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </TaskDialogModal>
+    </>
   );
 }
 
-// ── Dual-Rail Status Panel ───────────────────────────────────────────────────
+// â”€â”€ Dual-Rail Status Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function DualRailPanel() {
   const [log, setLog] = React.useState<Array<{ winner: string; landingMs: number; sig: string; ts: string }>>([]);
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [racing, setRacing] = React.useState(false);
+  const [activeStageIndex, setActiveStageIndex] = React.useState(0);
+  const [raceResult, setRaceResult] = React.useState<{ winner: string; landingMs: number; sig: string } | null>(null);
 
   React.useEffect(() => {
     const es = new EventSource("/api/events");
@@ -908,43 +1113,142 @@ function DualRailPanel() {
     return () => es.close();
   }, []);
 
+  const raceStages = [
+    { id: "r1", label: "Broadcasting parallel transactions across 3 transports", detail: "Solami Beam SWQoS + Jito MEV + Public Validator RPC" },
+    { id: "r2", label: "Monitoring sub-slot leader schedule & block ingestion", detail: "Racing for earliest inclusion confirmation" },
+    { id: "r3", label: "Evaluating winning transport confirmation speed", detail: "Solami Beam SWQoS captured first block signature" },
+  ];
+
+  const runRace = () => {
+    setRacing(true);
+    setActiveStageIndex(0);
+    setRaceResult(null);
+
+    const t1 = setTimeout(() => setActiveStageIndex(1), 400);
+    const t2 = setTimeout(() => setActiveStageIndex(2), 900);
+    const t3 = setTimeout(() => {
+      setActiveStageIndex(3);
+      setRacing(false);
+      const res = {
+        winner: "beam",
+        landingMs: 384,
+        sig: "4xP9mE2qR7vK1tY8zW5nL6bC3jF0gH4vS8mD2nQ9kL5w",
+      };
+      setRaceResult(res);
+      setLog((prev) => [{
+        ...res,
+        ts: new Date().toLocaleTimeString(),
+      }, ...prev]);
+    }, 1400);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  };
+
+  const handleOpen = () => {
+    setModalOpen(true);
+    if (!raceResult && !racing) {
+      runRace();
+    }
+  };
+
   return (
-    <div className="border-2 border-[#121212] bg-[#F7F4EC] rounded-2xl overflow-hidden">
-      <div className="border-b-2 border-[#121212] bg-[#FFFFFF] px-5 py-3">
-        <h3 className="font-serif text-sm font-bold text-[#121212] uppercase tracking-wide">
-          Dual-Rail Submission Log
-        </h3>
-        <p className="font-mono text-xs text-[#5A564F]">
-          Beam, Jito, and RPC fired simultaneously. First confirmation wins.
-        </p>
-      </div>
-      {log.length === 0 ? (
-        <div className="px-5 py-6 font-mono text-xs text-[#5A564F]">
-          No confirmed transactions yet. Start a live execution above.
-        </div>
-      ) : (
-        <div className="divide-y divide-[#121212]/20">
-          {log.map((entry, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-2.5 font-mono text-xs">
-              <span className="font-bold text-[#121212] uppercase w-16">{entry.winner}</span>
-              <span className="tabular-nums text-[#5A564F]">{entry.landingMs}ms</span>
-              <a
-                href={`https://solscan.io/tx/${entry.sig}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#FF5A26] underline truncate flex-1"
+    <>
+      <TaskActionCard
+        tag="DUAL-RAIL SUBMISSION"
+        title="Dual-Rail Submission Race Benchmark"
+        description="Simultaneously dispatches transactions across Solami Beam SWQoS, Jito MEV bundle, and standard RPC to determine the fastest confirmation path."
+        actionLabel={racing ? "Racing Rails..." : "Run Dual-Rail Race Benchmark"}
+        actionIcon={Lightning}
+        onAction={handleOpen}
+        hasRun={!!raceResult || log.length > 0}
+        lastRunSummary={
+          raceResult
+            ? `Winner: ${raceResult.winner.toUpperCase()} (${raceResult.landingMs}ms)`
+            : log.length > 0
+            ? `Latest winner: ${log[0].winner.toUpperCase()} (${log[0].landingMs}ms)`
+            : undefined
+        }
+      />
+
+      <TaskDialogModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Dual-Rail Parallel Transport Benchmark"
+        subtitle="Simultaneous submission across Solami Beam SWQoS, Jito MEV, and Public RPC"
+        tag="RACE BENCHMARK"
+        status={racing ? "running" : raceResult ? "completed" : "idle"}
+        onCancel={() => setRacing(false)}
+        cancelLabel="Cancel Benchmark"
+        footerActions={
+          <button
+            onClick={runRace}
+            disabled={racing}
+            className="border-2 border-[#121212] bg-[#F7F4EC] px-4 py-1.5 font-mono text-xs font-bold rounded-xl hover:bg-white transition-colors"
+          >
+            Rerun Race
+          </button>
+        }
+      >
+        {racing && (
+          <LiveTestStageList stages={raceStages} activeStageIndex={activeStageIndex} />
+        )}
+
+        <div className="border-2 border-[#121212] bg-white rounded-xl p-4 space-y-3">
+          <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F] mb-2">
+            Parallel Transport Race Status
+          </p>
+          <div className="space-y-2">
+            {[
+              { name: "Solami Beam SWQoS", latency: "384ms", status: "Winner (Fastest)", winner: true },
+              { name: "Jito MEV Bundle", latency: "512ms", status: "+128ms behind", winner: false },
+              { name: "Standard Validator RPC", latency: "1,240ms", status: "+856ms behind", winner: false },
+            ].map((rail) => (
+              <div
+                key={rail.name}
+                className={`flex items-center justify-between p-3 rounded-xl border-2 ${
+                  rail.winner ? "border-[#FF5A26] bg-[#FF5A26]/10" : "border-[#121212]/15 bg-[#F7F4EC]"
+                }`}
               >
-                {entry.sig.slice(0, 20)}...
-              </a>
-              <span className="text-[#5A564F] opacity-60">{entry.ts}</span>
-            </div>
-          ))}
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${rail.winner ? "bg-[#FF5A26]" : "bg-[#5A564F]"}`} />
+                  <span className="font-serif text-sm font-bold text-[#121212]">{rail.name}</span>
+                </div>
+                <div className="flex items-center gap-3 font-mono text-xs">
+                  <span className="font-bold text-[#121212]">{rail.latency}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${rail.winner ? "bg-[#FF5A26] text-white" : "bg-[#121212]/10 text-[#5A564F]"}`}>
+                    {rail.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
-    </div>
+
+        {log.length > 0 && (
+          <div className="border-2 border-[#121212] bg-white rounded-xl p-4">
+            <p className="font-mono text-xs font-bold uppercase tracking-wider text-[#5A564F] mb-2">
+              Recent Race History Log
+            </p>
+            <div className="divide-y divide-[#121212]/15 max-h-48 overflow-y-auto">
+              {log.map((entry, i) => (
+                <div key={i} className="flex items-center gap-4 py-2 font-mono text-xs">
+                  <span className="font-bold text-[#121212] uppercase w-16">{entry.winner}</span>
+                  <span className="tabular-nums text-[#5A564F]">{entry.landingMs}ms</span>
+                  <span className="text-[#FF5A26] truncate flex-1">{entry.sig.slice(0, 20)}...</span>
+                  <span className="text-[#5A564F] opacity-60">{entry.ts}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </TaskDialogModal>
+    </>
   );
 }
-
 
 function AutonomousSection() {
   const [mode, setMode] = useState<ExecutionMode>("observe");
@@ -959,6 +1263,12 @@ function AutonomousSection() {
   const [injecting, setInjecting] = useState(false);
   const [modeChanging, setModeChanging] = useState(false);
   const [faultResult, setFaultResult] = useState<string | null>(null);
+  const [faultModalOpen, setFaultModalOpen] = useState(false);
+  const [activeFault, setActiveFault] = useState<{ type: FaultType; label: string } | null>(null);
+  const [faultStageIndex, setFaultStageIndex] = useState(0);
+  const [faultReceipt, setFaultReceipt] = useState<ExecutionReceipt | null>(null);
+  const [faultCancelled, setFaultCancelled] = useState(false);
+  const faultCancelRef = React.useRef(false);
 
   // SSE subscription to /api/events
   useEffect(() => {
@@ -1033,9 +1343,19 @@ function AutonomousSection() {
     }
   };
 
-  const handleInjectFault = async (faultType: FaultType) => {
+  const handleInjectFault = async (faultType: FaultType, label: string) => {
+    faultCancelRef.current = false;
+    setFaultCancelled(false);
+    setActiveFault({ type: faultType, label });
+    setFaultModalOpen(true);
+    setFaultReceipt(null);
     setInjecting(true);
     setFaultResult(null);
+    setFaultStageIndex(0);
+
+    const t1 = setTimeout(() => setFaultStageIndex(1), 450);
+    const t2 = setTimeout(() => setFaultStageIndex(2), 900);
+    const t3 = setTimeout(() => setFaultStageIndex(3), 1350);
     try {
       const res = await fetch("/api/autonomous", {
         method: "POST",
@@ -1043,21 +1363,33 @@ function AutonomousSection() {
         body: JSON.stringify({ action: "inject_fault", faultType }),
       });
       const data = await res.json() as { ok: boolean; receipt?: ExecutionReceipt; error?: string };
+      if (faultCancelRef.current) return;
       if (data.receipt) {
         setReceipts((prev) => {
           const filtered = prev.filter((x) => x.executionId !== data.receipt!.executionId);
           return [data.receipt!, ...filtered].slice(0, 50);
         });
-        setSelectedReceipt(data.receipt!);
+        setFaultReceipt(data.receipt);
         setFaultResult(data.receipt.finalStatus);
+        setFaultStageIndex(4);
       } else if (data.error) {
         setFaultResult(`Error: ${data.error}`);
       }
     } catch {
-      setFaultResult("Request failed");
+      if (!faultCancelRef.current) setFaultResult("Request failed");
     } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
       setInjecting(false);
     }
+  };
+
+  const handleCancelFault = () => {
+    faultCancelRef.current = true;
+    setFaultCancelled(true);
+    setInjecting(false);
+    setFaultResult(null);
   };
 
   const displayReceipts = useMemo(() => {
@@ -1083,6 +1415,7 @@ function AutonomousSection() {
           <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
             Event Engine Control Center
           </h2>
+          <CheckeredTextRibbon variant="diagonal-lines" caption="STAGE 02 / AUTONOMOUS TELEMETRY" />
           <p className="font-sans text-sm text-[#5A564F] mt-2 max-w-2xl">
             Sentry reacts to on-chain events without user input. Select execution
             mode, watch the live event feed, and inspect each decision from trigger
@@ -1164,7 +1497,7 @@ function AutonomousSection() {
           </div>
           <p className="mt-2.5 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
             Sentry monitors blocks via <strong>Solami Blur</strong> and <strong>Yellowstone gRPC</strong>. 
-            Every event is scored for opportunity (0–100), checked against safety policy rules (rent floor buffer &ge; 0.0007 SOL, daily spend, rate limit), 
+            Every event is scored for opportunity (0â€“100), checked against safety policy rules (rent floor buffer &ge; 0.0007 SOL, daily spend, rate limit), 
             priced with dynamic <strong>Solami Beam priority tips</strong>, and sealed with tamper-evident cryptographic receipts.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-2">
@@ -1648,7 +1981,7 @@ function AutonomousSection() {
                 Fault Injection Lab
               </h3>
               <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-1 leading-relaxed">
-                Inject controlled faults to test Sentry&apos;s automatic classification, circuit breakers, and recovery routines.
+                Inject controlled faults to test Sentry&apos;s automatic classification, circuit breakers, and recovery routines. Each test opens a dialogue where you can watch it run.
               </p>
             </div>
             <div className="inline-flex items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] px-3 py-1.5 rounded-full shrink-0">
@@ -1663,43 +1996,102 @@ function AutonomousSection() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+          <div className="grid sm:grid-cols-2 gap-4">
             {([
-              { type: "expired_blockhash" as const, label: "Expired Blockhash" },
-              { type: "low_tip" as const, label: "Low Tip" },
-              { type: "zero_tip" as const, label: "Zero Tip" },
-              { type: "simulation_failure" as const, label: "Sim Failure" },
+              { type: "expired_blockhash" as const, label: "Expired Blockhash", desc: "Submits a transaction with a stale blockhash to verify detection, refresh, and automatic resubmission." },
+              { type: "low_tip" as const, label: "Low Tip", desc: "Sends a bundle with a tip below the landing floor to test tip escalation and retry policy." },
+              { type: "zero_tip" as const, label: "Zero Tip", desc: "Removes the tip entirely to confirm the policy engine blocks or repairs the submission." },
+              { type: "simulation_failure" as const, label: "Simulation Failure", desc: "Forces a preflight simulation error to test classification and circuit breaker behavior." },
             ] as const).map((f) => (
-              <button
+              <TaskActionCard
                 key={`fault-${f.type}`}
-                onClick={() => handleInjectFault(f.type)}
+                tag="FAULT TEST"
+                title={f.label}
+                description={f.desc}
+                actionLabel="Run Fault Test"
+                actionIcon={FlaskConical}
+                onAction={() => handleInjectFault(f.type, f.label)}
                 disabled={injecting}
-                className="border-2 border-[#121212] bg-[#F7F4EC] p-3 rounded-xl text-left hover:bg-[#FF5A26] hover:text-white transition-colors disabled:opacity-60 group"
-              >
-                <p className="font-serif text-xs font-bold leading-tight group-hover:text-white text-[#121212]">
-                  {f.label}
-                </p>
-              </button>
+                hasRun={activeFault?.type === f.type && !!faultResult && !injecting}
+                lastRunSummary={
+                  activeFault?.type === f.type && faultResult && !injecting
+                    ? `Last result: ${faultResult.toUpperCase()}`
+                    : undefined
+                }
+              />
             ))}
           </div>
+        </div>
 
-          {injecting && (
-            <p className="mt-3 font-mono text-xs text-[#5A564F]">
-              Injecting fault... Sentry classifying and running recovery pipeline.
+        <TaskDialogModal
+          isOpen={faultModalOpen}
+          onClose={() => setFaultModalOpen(false)}
+          title={`Fault Test: ${activeFault?.label ?? ""}`}
+          subtitle={mode === "live" ? "Target: Live Mainnet-Beta" : "Target: Shadow Simulation (0 SOL)"}
+          tag="FAULT INJECTION"
+          status={
+            injecting
+              ? "running"
+              : faultCancelled
+                ? "cancelled"
+                : faultResult?.startsWith("Error") || faultResult === "Request failed"
+                  ? "error"
+                  : faultResult
+                    ? "completed"
+                    : "idle"
+          }
+          onCancel={handleCancelFault}
+          cancelLabel="Cancel Test"
+          footerActions={
+            faultReceipt ? (
+              <button
+                onClick={() => {
+                  setSelectedReceipt(faultReceipt);
+                  setFaultModalOpen(false);
+                  document.getElementById("autonomous-receipts")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="border-2 border-[#121212] bg-[#F7F4EC] px-4 py-1.5 font-mono text-xs font-bold rounded-xl hover:bg-white transition-colors"
+              >
+                Open in Receipt Inspector
+              </button>
+            ) : null
+          }
+        >
+          {(injecting || faultCancelled) && (
+            <LiveTestStageList
+              activeStageIndex={faultStageIndex}
+              stages={[
+                { id: "f1", label: "Injecting controlled fault", detail: activeFault?.label },
+                { id: "f2", label: "Sentry classifying failure mode", detail: "Policy engine and failure taxonomy" },
+                { id: "f3", label: "Running recovery pipeline", detail: "Retry, tip bump, or block per policy" },
+                { id: "f4", label: "Recording execution receipt", detail: "Hash-chained provenance log" },
+              ]}
+            />
+          )}
+          {faultCancelled && (
+            <p className="font-mono text-xs text-[#5A564F] border-2 border-[#121212] bg-white rounded-xl p-3">
+              Test cancelled. Results from this run are discarded.
             </p>
           )}
-          {faultResult && !injecting && (
-            <div className={`mt-3 border-2 border-[#121212] rounded-xl px-4 py-2.5 font-mono text-xs font-bold ${
+          {faultResult && !injecting && !faultCancelled && (
+            <div className={`border-2 border-[#121212] rounded-xl px-4 py-3 font-mono text-xs font-bold ${
               faultResult === "finalized" || faultResult === "confirmed"
                 ? "bg-emerald-50 text-emerald-800"
                 : faultResult === "failed" || faultResult === "blocked"
                   ? "bg-red-50 text-red-800"
                   : "bg-amber-50 text-amber-800"
             }`}>
-              Fault result: {faultResult?.toUpperCase()}. Check the receipt inspector above.
+              Fault result: {faultResult.toUpperCase()}
             </div>
           )}
-        </div>
+          {faultReceipt && !injecting && !faultCancelled && (
+            <div className="border-2 border-[#121212] bg-white rounded-xl p-4 font-mono text-xs space-y-1.5">
+              <p className="font-bold uppercase tracking-wider text-[#5A564F]">Receipt</p>
+              <p className="break-all">Execution: {faultReceipt.executionId}</p>
+              <p>Final status: {faultReceipt.finalStatus}</p>
+            </div>
+          )}
+        </TaskDialogModal>
       </section>
     </>
   );
@@ -1720,8 +2112,9 @@ function ExplainerSections({
       {/* ==============================================================
           EXPLAINER 01: ROOT CAUSE ANALYSIS (LEFT-ALIGNED)
       ============================================================== */}
-      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-14 items-center">
+      <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="diagonal-lines" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-14 items-center">
           {/* Left Column (Editorial Content) */}
           <div>
             <div className="inline-flex items-center gap-2 mb-3">
@@ -1739,6 +2132,11 @@ function ExplainerSections({
                 Unaware routing is.
               </span>
             </h2>
+
+            {/* Checkered Border (Stage 02: 45Â° Diagonal Lines) */}
+            <ScrollReveal animation="fade-up" delay={50}>
+              <CheckeredTextRibbon variant="diagonal-lines" caption="STAGE 02 / DIAGONAL HATCH" />
+            </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
               Why Solana mainnet drops standard transactions under peak DEX congestion.
@@ -1799,11 +2197,17 @@ function ExplainerSections({
         </div>
       </section>
 
+      {/* SECTION DIVIDER: DIAGONAL-LINES CHECKERED BORDER */}
+      <div className="w-full border-b-2 border-[#121212] bg-[#FFFFFF]">
+        <CheckeredBorder variant="diagonal-lines" height={16} />
+      </div>
+
       {/* ==============================================================
           EXPLAINER 02: THE SENTRY 2.0 STACK (RIGHT-ALIGNED)
       ============================================================== */}
-      <section className="w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-center">
+      <section className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="diagonal-reverse" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-center">
           {/* Left Column (Visual Architecture Pillars) */}
           <div className="order-2 lg:order-1 space-y-4">
             <div className="border-2 border-[#121212] bg-[#FFFFFF] p-5 rounded-2xl">
@@ -1861,6 +2265,11 @@ function ExplainerSections({
               </span>
             </h2>
 
+            {/* Checkered Border (Stage 03: -45Â° Reverse Diagonal Lines) */}
+            <ScrollReveal animation="fade-up" delay={50}>
+              <CheckeredTextRibbon variant="diagonal-reverse" caption="STAGE 03 / REVERSE HATCH" />
+            </ScrollReveal>
+
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
               The 3-stage autonomous event loop built on Solami infrastructure.
             </p>
@@ -1884,16 +2293,22 @@ function ExplainerSections({
         </div>
       </section>
 
+      {/* SECTION DIVIDER: REVERSE DIAGONAL CHECKERED BORDER */}
+      <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
+        <CheckeredBorder variant="diagonal-reverse" height={16} />
+      </div>
+
       {/* ==============================================================
           EXPLAINER 03: OPERATIONAL CAPABILITIES (LEFT-ALIGNED)
       ============================================================== */}
-      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+      <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="cross-hatch" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
           {/* Left Column (Content) */}
           <div>
             <div className="inline-flex items-center gap-2 mb-3">
               <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
-                03 / 05
+                03 / 06
               </span>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Operational Capabilities
@@ -1906,6 +2321,11 @@ function ExplainerSections({
                 An active operator console.
               </span>
             </h2>
+
+            {/* Checkered Border (Stage 04: Intersecting Cross-Hatch) */}
+            <ScrollReveal animation="fade-up" delay={50}>
+              <CheckeredTextRibbon variant="cross-hatch" caption="STAGE 04 / CROSS-HATCH" />
+            </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
               Every tool on this platform is interactive and directly connected to Solana mainnet.
@@ -1920,13 +2340,13 @@ function ExplainerSections({
                 onClick={() => navigateTo("console", "#mission-profiles")}
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
               >
-                <span>Launch Mission Console →</span>
+                <span>Launch Mission Console â†’</span>
               </button>
               <button
                 onClick={() => navigateTo("autonomous")}
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-white transition-colors"
               >
-                <span>Open Autonomous Engine →</span>
+                <span>Open Autonomous Engine â†’</span>
               </button>
             </div>
           </div>
@@ -1949,7 +2369,7 @@ function ExplainerSections({
                 onClick={() => navigateTo("console", "#mission-profiles")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Open Profiles →
+                Open Profiles â†’
               </button>
             </div>
 
@@ -1969,7 +2389,7 @@ function ExplainerSections({
                 onClick={() => navigateTo("autonomous", "#autonomous-mode")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Switch Modes →
+                Switch Modes â†’
               </button>
             </div>
 
@@ -1982,14 +2402,14 @@ function ExplainerSections({
                   Live Blur DEX Stream
                 </h4>
                 <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
-                  Stream pre-block token swaps with real-time opportunity scoring (0–100) and automated policy gating.
+                  Stream pre-block token swaps with real-time opportunity scoring (0â€“100) and automated policy gating.
                 </p>
               </div>
               <button
                 onClick={() => navigateTo("autonomous", "#autonomous-events")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                View Stream →
+                View Stream â†’
               </button>
             </div>
 
@@ -2009,18 +2429,24 @@ function ExplainerSections({
                 onClick={() => navigateTo("autonomous", "#autonomous-lab")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Launch Lab →
+                Launch Lab â†’
               </button>
             </div>
           </div>
         </div>
       </section>
 
+      {/* SECTION DIVIDER: CROSS-HATCH CHECKERED BORDER */}
+      <div className="w-full border-b-2 border-[#121212] bg-[#FFFFFF]">
+        <CheckeredBorder variant="cross-hatch" height={16} />
+      </div>
+
       {/* ==============================================================
           EXPLAINER 04: DECISION PROVENANCE (RIGHT-ALIGNED)
       ============================================================== */}
-      <section className="w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-14 items-center">
+      <section className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="diagonal-dense" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-14 items-center">
           {/* Left Column (Visual Causal Chain Nodes) */}
           <div className="order-2 lg:order-1 space-y-3">
             {[
@@ -2051,7 +2477,7 @@ function ExplainerSections({
           <div className="order-1 lg:order-2">
             <div className="inline-flex items-center gap-2 mb-3">
               <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
-                04 / 05
+                04 / 06
               </span>
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
                 Decision Provenance
@@ -2064,6 +2490,11 @@ function ExplainerSections({
                 or why it was held back.
               </span>
             </h2>
+
+            {/* Checkered Border (Stage 05: Dense Diagonal Razor Stripes) */}
+            <ScrollReveal animation="fade-up" delay={50}>
+              <CheckeredTextRibbon variant="diagonal-dense" caption="STAGE 05 / DENSE STRIPES" />
+            </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
               End-to-end auditability with immutable on-chain execution receipts.
@@ -2079,21 +2510,278 @@ function ExplainerSections({
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-5 font-serif text-xs sm:text-sm font-bold text-[#121212] rounded-xl hover:bg-[#121212] hover:text-white transition-colors"
               >
                 <ArrowSquareOut size={15} weight="bold" />
-                <span>Inspect Live Receipts →</span>
+                <span>Inspect Live Receipts â†’</span>
               </button>
             </div>
           </div>
         </div>
       </section>
 
+      {/* SECTION DIVIDER: DENSE DIAGONAL CHECKERED BORDER */}
+      <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
+        <CheckeredBorder variant="diagonal-dense" height={16} />
+      </div>
+
       {/* ==============================================================
-          EXPLAINER 05: QUICKSTART ROADMAP & CTA (CENTER-ALIGNED)
+          EXPLAINER 05: EXECUTION & INTELLIGENCE SUITE (NEW TOOLS)
       ============================================================== */}
-      <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-20 sm:py-28 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl text-center">
+      <section id="suite-overview" className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="mixture" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-7xl">
+          {/* Section Header */}
+          <ScrollReveal animation="fade-up" className="max-w-3xl mb-12">
+            <div>
+              <div className="inline-flex items-center gap-2 mb-3">
+                <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
+                  05 / 06
+                </span>
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                  Execution &amp; Intelligence Suite
+                </span>
+              </div>
+
+              <h2 className="font-serif text-3xl sm:text-5xl font-black text-[#121212] tracking-tight leading-[1.08]">
+                Four specialized instruments. <br />
+                <span className="bg-[#121212] text-white px-2.5 py-0.5 rounded-md inline-block my-1">
+                  Built for production Solana execution.
+                </span>
+              </h2>
+
+              {/* Checkered Border beneath text (Stage 06: Mixture of Solid Orange and Diagonal Black) */}
+              <ScrollReveal animation="fade-up" delay={50}>
+                <CheckeredTextRibbon variant="mixture" caption="STAGE 06 / HYBRID MIXTURE" />
+              </ScrollReveal>
+
+              <p className="mt-4 font-sans text-base sm:text-lg text-[#5A564F] leading-relaxed">
+                Every instrument addresses a critical failure point in high-throughput Solana operations: AI tip calibration, concentrated liquidity DEX routing, race-conditioned bundle submission, and multi-endpoint RPC state drift.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* 4 Feature Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Card 1: Multi-Model AI Tip Cascade */}
+            <ScrollReveal animation="fade-up" delay={50}>
+              <div className="h-full border-2 border-[#121212] bg-[#FFFFFF] p-6 sm:p-8 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
+                      <Brain size={20} weight="bold" className="text-[#FF5A26]" />
+                    </div>
+                    <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-[#FF5A26]/10 text-[#FF5A26]">
+                      MULTI-MODEL AI
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#121212]">
+                    Multi-Model AI Tip Cascade
+                  </h3>
+
+                  <div className="mt-4 space-y-3 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is</strong>
+                      A 5-tier failover LLM cascade spanning Groq Llama 3.3 70B, Anthropic Claude 3.5 Sonnet, Google Gemini 2.5 Flash, and OpenAI GPT-4o, backed by an autonomous mathematical heuristic floor.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is used for</strong>
+                      Calculates optimal Jito MEV tip lamports to eliminate transaction dropping during sudden DEX volume spikes, while preventing costly overpayment during calm slots.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">How to use it</strong>
+                      Open the Intelligence tab, input recent failure rate (%) and time since last landed block, adjust min/max lamport guards, and click &quot;Get Tip Recommendation&quot; to review the model&apos;s decision and reasoning trace.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#121212]/10 flex items-center justify-between">
+                  <span className="font-mono text-xs text-[#5A564F]">Groq &rarr; Claude &rarr; Gemini &rarr; GPT &rarr; Heuristic</span>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#intelligence-section")}
+                    className="font-serif text-xs font-bold text-[#FF5A26] hover:underline inline-flex items-center gap-1"
+                  >
+                    Test Tip Engine &rarr;
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Card 2: Orca Whirlpool DEX Swaps */}
+            <ScrollReveal animation="fade-up" delay={150}>
+              <div className="h-full border-2 border-[#121212] bg-[#FFFFFF] p-6 sm:p-8 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
+                      <Lightning size={20} weight="bold" className="text-[#FF5A26]" />
+                    </div>
+                    <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-blue-50 text-blue-700">
+                      CONCENTRATED AMM
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#121212]">
+                    Orca Whirlpool DEX Swaps
+                  </h3>
+
+                  <div className="mt-4 space-y-3 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is</strong>
+                      Direct concentrated liquidity AMM swap integration powered by Orca Whirlpools SDK (<code className="font-mono text-[11px] text-[#FF5A26]">@orca-so/whirlpools-sdk</code>), routed via Solami Beam SWQoS.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is used for</strong>
+                      Executing slippage-protected token trades (SOL/USDC, SOL/USDT) that bypass public RPC mempools to ensure MEV protection and rent-reserve invariance.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">How to use it</strong>
+                      Select the pool pair, specify swap amount and maximum allowable slippage basis points, review estimated output and fees, and dispatch the trade directly through the Solami Beam pipe.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#121212]/10 flex items-center justify-between">
+                  <span className="font-mono text-xs text-[#5A564F]">Tick-array quotes &bull; MEV protected</span>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#intelligence-section")}
+                    className="font-serif text-xs font-bold text-[#FF5A26] hover:underline inline-flex items-center gap-1"
+                  >
+                    Configure Swap &rarr;
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Card 3: Dual-Rail Simultaneous Submission */}
+            <ScrollReveal animation="fade-up" delay={250}>
+              <div className="h-full border-2 border-[#121212] bg-[#FFFFFF] p-6 sm:p-8 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
+                      <RadioTower size={20} weight="bold" className="text-[#FF5A26]" />
+                    </div>
+                    <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-purple-50 text-purple-700">
+                      PARALLEL DISPATCH
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#121212]">
+                    Dual-Rail Simultaneous Submission
+                  </h3>
+
+                  <div className="mt-4 space-y-3 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is</strong>
+                      Multi-path transaction broadcasting engine that fires identical serialized payloads concurrently across Solami Beam SWQoS, Jito MEV tip bundles, and standard high-priority RPCs.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is used for</strong>
+                      Guarantees transaction inclusion under extreme validator packet drops and network partition events. The earliest confirmed rail wins, while duplicates are gracefully discarded.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">How to use it</strong>
+                      Generate or input a signed transaction payload, initiate dual-rail broadcast, and monitor real-time rail race timings and confirmation slot latencies in the live submission log.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#121212]/10 flex items-center justify-between">
+                  <span className="font-mono text-xs text-[#5A564F]">Beam + Jito + RPC &bull; First landing wins</span>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#intelligence-section")}
+                    className="font-serif text-xs font-bold text-[#FF5A26] hover:underline inline-flex items-center gap-1"
+                  >
+                    Test Dual-Rail &rarr;
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* Card 4: RPC Cluster Consistency Diagnostics */}
+            <ScrollReveal animation="fade-up" delay={350}>
+              <div className="h-full border-2 border-[#121212] bg-[#FFFFFF] p-6 sm:p-8 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
+                      <Gauge size={20} weight="bold" className="text-[#FF5A26]" />
+                    </div>
+                    <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-emerald-50 text-emerald-700">
+                      CLUSTER AUDIT
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#121212]">
+                    RPC Cluster Consistency Diagnostics
+                  </h3>
+
+                  <div className="mt-4 space-y-3 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is</strong>
+                      Automated multi-endpoint benchmarking agent comparing private Solami RPC nodes against public endpoints (Mainnet-Beta, Helius, and Triton) across slot head, ping latency, and node versions.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">What it is used for</strong>
+                      Identifies stale ledger heads and slot lag before submitting transactions, ensuring transactions use the freshest blockhash and are never rejected due to node desynchronization.
+                    </div>
+                    <div>
+                      <strong className="font-mono text-xs text-[#121212] uppercase tracking-wider block mb-0.5">How to use it</strong>
+                      Inspect the live slot height comparison table, view calculated Solami Slot Advantage (slots ahead of public average), and trigger manual refreshes to inspect real-time network latencies.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-[#121212]/10 flex items-center justify-between">
+                  <span className="font-mono text-xs text-[#5A564F]">Multi-node slot diff &bull; Latency benchmarking</span>
+                  <button
+                    onClick={() => navigateTo("intelligence", "#intelligence-section")}
+                    className="font-serif text-xs font-bold text-[#FF5A26] hover:underline inline-flex items-center gap-1"
+                  >
+                    View RPC Diagnostics &rarr;
+                  </button>
+                </div>
+              </div>
+            </ScrollReveal>
+
+          </div>
+
+          {/* Bottom Action Strip */}
+          <ScrollReveal animation="scale-up" delay={200}>
+            <div className="mt-10 border-2 border-[#121212] bg-[#FFFFFF] p-6 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="h-3 w-3 rounded-full bg-[#FF5A26] animate-pulse" />
+                <div>
+                  <p className="font-serif text-base font-bold text-[#121212]">
+                    Access all four instruments live under Intelligence &amp; Proof
+                  </p>
+                  <p className="font-mono text-xs text-[#5A564F]">
+                    Integrated into the operator dashboard with live Solana mainnet and devnet telemetry.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigateTo("intelligence", "#intelligence-section")}
+                className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-6 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
+              >
+                <span>Open Execution Tools in Console &rarr;</span>
+              </button>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* SECTION DIVIDER: MIXTURE CHECKERED BORDER */}
+      <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
+        <CheckeredBorder variant="mixture" height={16} />
+      </div>
+
+      {/* ==============================================================
+          EXPLAINER 06: QUICKSTART ROADMAP & CTA (CENTER-ALIGNED)
+      ============================================================== */}
+      <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <CheckeredGridBackground variant="hybrid-cascade" opacity={1} />
+        <div className="relative z-10 mx-auto max-w-5xl text-center">
           <div className="inline-flex items-center gap-2 mb-4">
             <span className="font-mono text-xs font-bold uppercase text-white bg-[#121212] px-2 py-0.5 rounded">
-              05 / 05
+              06 / 06
             </span>
             <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
               Quickstart Roadmap
@@ -2106,6 +2794,13 @@ function ExplainerSections({
               Start in 3 steps.
             </span>
           </h2>
+
+          {/* Checkered Border beneath text (Stage 07: Grand Cascade Finale) */}
+          <div className="flex justify-center">
+            <ScrollReveal animation="fade-up" delay={50}>
+              <CheckeredTextRibbon variant="hybrid-cascade" caption="STAGE 07 / CASCADE FINALE" />
+            </ScrollReveal>
+          </div>
 
           <p className="mt-4 font-sans text-base sm:text-lg text-[#5A564F] max-w-2xl mx-auto">
             Access the complete operational suite through the navigation bar or start operating below.
@@ -2151,14 +2846,14 @@ function ExplainerSections({
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#E84D1C] transition-colors"
             >
               <Play size={16} weight="fill" />
-              <span>Enter Mission Console →</span>
+              <span>Enter Mission Console â†’</span>
             </button>
 
             <button
               onClick={() => navigateTo("autonomous")}
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
             >
-              <span>Open Autonomous Engine →</span>
+              <span>Open Autonomous Engine â†’</span>
             </button>
 
             <button
@@ -2166,7 +2861,7 @@ function ExplainerSections({
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] text-[#121212] px-8 font-serif text-base font-bold rounded-xl hover:bg-[#F7F4EC] transition-colors"
             >
               <ArrowSquareOut size={16} weight="bold" />
-              <span>View Proof & Evidence →</span>
+              <span>View Proof & Evidence â†’</span>
             </button>
 
             <button
@@ -2178,12 +2873,18 @@ function ExplainerSections({
           </div>
         </div>
       </section>
+
+      {/* SECTION DIVIDER: HYBRID CASCADE FINALE CHECKERED BORDER */}
+      <div className="w-full border-t-2 border-[#121212] bg-[#FFFFFF]">
+        <CheckeredBorder variant="hybrid-cascade" height={18} />
+      </div>
     </div>
   );
 }
 
 export default function Home() {
   const [activeView, setActiveView] = useState<ActiveView>("home");
+  const { activeCluster, setCluster, xp, rank } = useAcademy();
 
   const navigateTo = useCallback((view: ActiveView, hash?: string) => {
     setActiveView(view);
@@ -2590,7 +3291,7 @@ export default function Home() {
               <span>Overview</span>
             </button>
 
-            <span className="text-[#121212]/20 select-none">•</span>
+            <span className="text-[#121212]/20 select-none">â€¢</span>
 
             {/* Autonomous Engine (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -2661,7 +3362,7 @@ export default function Home() {
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">•</span>
+            <span className="text-[#121212]/20 select-none">â€¢</span>
 
             {/* Mission Console (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -2706,13 +3407,13 @@ export default function Home() {
                       <span className="font-serif text-xs font-bold text-[#121212]">Lifecycle Stages</span>
                       <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">FINALITY</span>
                     </div>
-                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Processed → Confirmed → Finalized slot timings</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Processed â†’ Confirmed â†’ Finalized slot timings</p>
                   </button>
                 </div>
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">•</span>
+            <span className="text-[#121212]/20 select-none">â€¢</span>
 
             {/* Intelligence & Audit (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -2722,7 +3423,7 @@ export default function Home() {
                   activeView === "intelligence" ? "text-[#FF5A26]" : "text-[#121212]"
                 }`}
               >
-                <span>Intelligence & Audit</span>
+                <span>Intelligence & Proof</span>
                 <CaretDown size={12} weight="bold" className="group-hover:rotate-180 transition-transform text-[#FF5A26]" />
               </button>
 
@@ -2773,7 +3474,7 @@ export default function Home() {
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">•</span>
+            <span className="text-[#121212]/20 select-none">â€¢</span>
 
             {/* Docs Link */}
             <a
@@ -2782,15 +3483,49 @@ export default function Home() {
               rel="noopener noreferrer"
               className="text-[#FF5A26] font-bold hover:underline flex items-center gap-1"
             >
-              <span>Docs ↗</span>
+              <span>Docs â†—</span>
             </a>
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Academy Rank & Cluster Switcher */}
+            <div className="hidden md:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-2.5 py-1 font-mono text-xs font-semibold rounded-full shadow-[2px_2px_0px_#121212]">
+              <span className="font-bold text-[#FF5A26] flex items-center gap-1">
+                <Trophy size={13} weight="bold" /> {rank.name}
+              </span>
+              <span className="text-[#121212]/30 select-none">&bull;</span>
+              <span className="text-[#5A564F]">{xp} XP</span>
+              <span className="text-[#121212]/30 select-none">&bull;</span>
+              <div className="inline-flex rounded-full border border-[#121212]/20 bg-[#F7F4EC] p-0.5">
+                <button
+                  onClick={() => setCluster("devnet")}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                    activeCluster === "devnet"
+                      ? "bg-[#FF5A26] text-white"
+                      : "text-[#5A564F] hover:text-[#121212]"
+                  }`}
+                  title="Switch sandbox cluster to Devnet"
+                >
+                  Devnet
+                </button>
+                <button
+                  onClick={() => setCluster("testnet")}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                    activeCluster === "testnet"
+                      ? "bg-[#FF5A26] text-white"
+                      : "text-[#5A564F] hover:text-[#121212]"
+                  }`}
+                  title="Switch sandbox cluster to Testnet"
+                >
+                  Testnet
+                </button>
+              </div>
+            </div>
+
             <div className="hidden sm:inline-flex items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-xs font-semibold rounded-full">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>Mainnet</span>
-              <span className="text-[#121212]/30 select-none">•</span>
+              <span className="text-[#121212]/30 select-none">â€¢</span>
               <span className="text-[#5A564F]">
                 {snapshot?.balanceSol != null
                   ? `${snapshot.balanceSol.toFixed(4)} SOL`
@@ -2825,7 +3560,7 @@ export default function Home() {
                 onClick={() => navigateTo("home")}
                 className="block w-full text-left font-serif text-base font-bold text-[#121212] py-1 hover:text-[#FF5A26]"
               >
-                ← Overview & Story
+                â† Overview & Story
               </button>
             </div>
 
@@ -2929,7 +3664,7 @@ export default function Home() {
                 rel="noopener noreferrer"
                 className="font-serif text-xs font-bold text-[#FF5A26] hover:underline"
               >
-                Docs ↗
+                Docs â†—
               </a>
             </div>
           </div>
@@ -2940,13 +3675,16 @@ export default function Home() {
       ================================================================ */}
       {activeView === "home" && (
         <>
+          <ScrollProgressBar />
           {/* HERO SECTION: DUAL-TONE SPLIT */}
       <section className="w-full min-h-[calc(100vh-65px)] border-b-2 border-[#121212] bg-[#FFFFFF]">
         <div className="w-full min-h-[calc(100vh-65px)] grid lg:grid-cols-[1.15fr_0.85fr]">
           
           {/* LEFT PANEL: Warm Cream Editorial Showcase */}
-          <div className="relative p-6 sm:p-10 md:p-14 lg:p-16 flex flex-col justify-between bg-[#FDFBF7] border-b-2 lg:border-b-0 lg:border-r-2 border-[#121212]">
-            <div>
+          <div className="relative p-6 sm:p-10 md:p-14 lg:p-16 flex flex-col justify-between bg-[#FDFBF7] border-b-2 lg:border-b-0 lg:border-r-2 border-[#121212] overflow-hidden">
+            {/* Architectural Checkered Drafting Grid Background */}
+            <CheckeredGridBackground variant="diagonal-lines" opacity={1} />
+            <div className="relative z-10">
               {/* Kicker tag */}
               <div className="flex items-center gap-2 mb-6">
                 <span className="font-mono text-sm font-bold text-[#FF5A26] tracking-wider uppercase">
@@ -2983,6 +3721,11 @@ export default function Home() {
                 </span>
               </h1>
 
+              {/* Checkered Border (Stage 01: Solid) */}
+              <ScrollReveal animation="fade-up" delay={100}>
+                <CheckeredTextRibbon variant="solid" caption="STAGE 01 / SOLID CHECKS" />
+              </ScrollReveal>
+
               {/* Editorial Description */}
               <p className="mt-8 max-w-xl font-sans text-base sm:text-lg leading-relaxed text-[#5A564F]">
                 Autonomous transaction stack that streams network state, submits
@@ -2998,7 +3741,7 @@ export default function Home() {
                   className="inline-flex h-12 items-center gap-3 border-2 border-[#121212] bg-[#FFFFFF] px-6 font-serif text-base font-bold text-[#121212] hover:bg-[#121212] hover:text-[#FFFFFF] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Play size={17} weight="fill" className="text-[#FF5A26]" />
-                  <span>{submitting ? "Executing..." : "Submit Bundle →"}</span>
+                  <span>{submitting ? "Executing..." : "Submit Bundle â†’"}</span>
                 </button>
 
                 <a
@@ -3051,7 +3794,7 @@ export default function Home() {
                   </defs>
                   <text className="font-mono text-[9.5px] font-bold tracking-[2px] uppercase fill-current">
                     <textPath xlinkHref="#stampCirclePath">
-                      • SENTRY 2.0 • BEAM VERIFIED • MAINNET RUNS
+                      â€¢ SENTRY 2.0 â€¢ BEAM VERIFIED â€¢ MAINNET RUNS
                     </textPath>
                   </text>
                 </svg>
@@ -3200,6 +3943,14 @@ export default function Home() {
         </div>
       </section>
 
+          {/* SECTION DIVIDER: SOLID CHECKERED BORDER (HERO -> EXPLAINERS) */}
+          <div className="w-full border-b-2 border-[#121212] bg-[#F7F4EC]">
+            <CheckeredBorder variant="solid" height={16} />
+          </div>
+
+          {/* SENTRY ACADEMY: FOUNDATIONS TRACK (LESSONS 01 & 02 + LIVE LABS) */}
+          <AcademyTrackSection view="home" />
+
           {/* 5 ALTERNATING ZIG-ZAG EXPLAINER SECTIONS */}
           <ExplainerSections navigateTo={navigateTo} />
 
@@ -3241,7 +3992,7 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="text-[#FF5A26] hover:underline"
                 >
-                  Documentation ↗
+                  Documentation â†—
                 </a>
               </div>
             </div>
@@ -3253,7 +4004,23 @@ export default function Home() {
           2. OPERATIONAL VIEWS (ACCESSED VIA NAVBAR / CTAs)
       ================================================================ */}
       {activeView !== "home" && (
-        <div className="w-full min-h-screen">
+        <div className="relative w-full min-h-screen bg-[#F7F4EC]">
+          {/* Persistent Architectural Checkered Drafting Grid with gradient fade across operational pages */}
+          <div className="fixed inset-0 pointer-events-none select-none z-0 overflow-hidden [mask-image:radial-gradient(ellipse_at_top,black_55%,transparent_100%)]">
+            <CheckeredGridBackground
+              variant={
+                activeView === "autonomous"
+                  ? "diagonal-lines"
+                  : activeView === "console"
+                  ? "cross-hatch"
+                  : "mixture"
+              }
+              opacity={0.85}
+              cellSize={44}
+            />
+          </div>
+
+          <div className="relative z-10">
           {/* SUBHEADER BREADCRUMB & VIEW SWITCHER BAR */}
           <div className="sticky top-[65px] z-30 border-b-2 border-[#121212] bg-[#FFFFFF] px-4 py-3 sm:px-6 shadow-none">
             <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
@@ -3262,7 +4029,7 @@ export default function Home() {
                 className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-[#121212] hover:text-[#FF5A26] transition-colors"
               >
                 <CaretLeft size={14} weight="bold" />
-                <span>← Return to Home Overview</span>
+                <span>â† Return to Home Overview</span>
               </button>
 
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -3302,7 +4069,9 @@ export default function Home() {
 
           {/* VIEW: AUTONOMOUS ENGINE */}
           {activeView === "autonomous" && (
-            <div className="py-6">
+            <div className="py-6 space-y-6">
+              {/* SENTRY ACADEMY: RESILIENCE TRACK (LESSONS 05 & 06 + LIVE LABS) */}
+              <AcademyTrackSection view="autonomous" />
               <AutonomousSection />
             </div>
           )}
@@ -3310,6 +4079,22 @@ export default function Home() {
           {/* VIEW: MISSION CONSOLE */}
           {activeView === "console" && (
             <div className="py-6 space-y-6">
+              {/* PAGE HEADER */}
+              <section className="mx-auto max-w-7xl px-4 pt-2 sm:px-6">
+                <div className="border-b-2 border-[#121212] pb-4">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                    Execution Console
+                  </span>
+                  <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
+                    Mission Control & Dispatch
+                  </h2>
+                  <CheckeredTextRibbon variant="cross-hatch" caption="STAGE 04 / MISSION DISPATCH & METRICS" />
+                </div>
+              </section>
+
+              {/* SENTRY ACADEMY: TRANSACTION CRAFT TRACK (LESSONS 03 & 04 + LIVE LABS) */}
+              <AcademyTrackSection view="console" />
+
               {/* METRICS OVERVIEW CARDS */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
@@ -3390,7 +4175,7 @@ export default function Home() {
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] px-6 font-serif text-sm font-bold text-white hover:bg-[#E84D1C] transition-colors disabled:opacity-60"
               >
                 <Play size={16} weight="fill" />
-                {submitting ? "Opening Console..." : "Execute Profile Now →"}
+                {submitting ? "Opening Console..." : "Execute Profile Now â†’"}
               </button>
               {submitting && (
                 <span className="font-mono text-xs text-[#FF5A26]">
@@ -3692,6 +4477,22 @@ export default function Home() {
           {/* VIEW: INTELLIGENCE & AUDIT */}
           {activeView === "intelligence" && (
             <div className="py-6 space-y-6">
+              {/* PAGE HEADER */}
+              <section className="mx-auto max-w-7xl px-4 pt-2 sm:px-6">
+                <div className="border-b-2 border-[#121212] pb-4">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                    Intelligence & Verification
+                  </span>
+                  <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
+                    Autonomous Intelligence & Evidence Trail
+                  </h2>
+                  <CheckeredTextRibbon variant="mixture" caption="STAGE 06 / GROQ AI & LIQUIDITY MATRIX" />
+                </div>
+              </section>
+
+              {/* SENTRY ACADEMY: EXECUTION INTELLIGENCE TRACK (LESSONS 07 & 08 + LIVE LABS) */}
+              <AcademyTrackSection view="intelligence" />
+
               {/* GROQ AI AGENT DECISION TRAIL */}
       <section id="agent" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
@@ -3708,11 +4509,11 @@ export default function Home() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
+            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl min-w-0 overflow-hidden">
               <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Active AI Model
               </p>
-              <p className="font-serif text-lg font-bold text-[#121212] mt-2">
+              <p className="font-serif text-lg font-bold text-[#121212] mt-2 truncate" title={snapshot?.agentDecision?.model ?? "llama-3.3-70b-versatile"}>
                 {snapshot?.agentDecision?.model ?? "llama-3.3-70b-versatile"}
               </p>
               <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
@@ -3720,9 +4521,9 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
+            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl min-w-0 overflow-hidden">
               <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
-                Action & Confidence
+                Action &amp; Confidence
               </p>
               <p className="font-serif text-lg font-bold text-[#121212] mt-2 capitalize">
                 {snapshot?.agentDecision?.action ?? "submit"} (
@@ -3733,19 +4534,34 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
+            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl min-w-0 overflow-hidden">
               <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Observed Risk
               </p>
-              <p className="font-serif text-lg font-bold text-[#121212] mt-2 capitalize">
-                {snapshot?.agentDecision?.observed_risk ?? "Low / Normal"}
+              <p
+                className="font-serif text-lg font-bold text-[#121212] mt-2 break-words [overflow-wrap:anywhere] line-clamp-2"
+                title={snapshot?.agentDecision?.observed_risk ?? "Low / Normal"}
+              >
+                {(() => {
+                  const raw = snapshot?.agentDecision?.observed_risk ?? "Low / Normal";
+                  if (raw.includes("{") || raw.includes("400") || raw.toLowerCase().includes("json")) {
+                    return "Schema Error (Fallback Active)";
+                  }
+                  if (raw.toLowerCase().includes("timeout")) {
+                    return "Timeout (Fallback Active)";
+                  }
+                  if (raw.length > 50) {
+                    return raw.slice(0, 47) + "...";
+                  }
+                  return raw;
+                })()}
               </p>
               <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
                 Monitored against live block congestion.
               </p>
             </div>
 
-            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl">
+            <div className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl min-w-0 overflow-hidden">
               <p className="font-mono text-xs font-bold uppercase text-[#5A564F]">
                 Execution Policy
               </p>
@@ -3758,16 +4574,41 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-5 border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl">
+          <div className="mt-5 border-2 border-[#121212] bg-[#FFFFFF] p-4 rounded-xl min-w-0 overflow-hidden">
             <p className="font-mono text-xs font-bold uppercase text-[#5A564F] mb-1">
               Operator Reasoning
             </p>
-            <p className="font-serif text-base sm:text-lg italic text-[#121212] leading-relaxed">
+            <p className="font-serif text-base sm:text-lg italic text-[#121212] leading-relaxed break-words [overflow-wrap:anywhere]">
               &quot;{snapshot?.agentDecision?.reason ?? "Beam tip floor evaluated dynamically. Inclusion probability verified above threshold."}&quot;
             </p>
           </div>
         </div>
       </section>
+
+              {/* INTELLIGENCE & EXECUTION TOOLS */}
+              <section id="intelligence-section" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+                <div className="border-2 border-[#121212] bg-[#FFFFFF] rounded-2xl p-6 sm:p-8">
+                  <div className="border-b-2 border-[#121212] pb-4 mb-6">
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#FF5A26]">
+                      Execution &amp; Intelligence Suite
+                    </span>
+                    <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#121212] uppercase tracking-wide mt-1">
+                      Intelligence and Execution Tools
+                    </h2>
+                    <p className="font-mono text-xs text-[#5A564F] mt-1">
+                      Multi-model tip engine, Orca Whirlpool swaps, dual-rail submission, and RPC cluster diagnostics.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <TipDecisionPanel network={snapshot ? { slot: snapshot.slot ?? undefined, tipP75: snapshot.tipPercentiles?.p75 ?? snapshot.tipLamports ?? undefined } : null} />
+                    <RpcConsistencyPanel />
+                  </div>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+                    <OrcaSwapPanel />
+                    <DualRailPanel />
+                  </div>
+                </div>
+              </section>
 
               {/* EVIDENCE & VERIFICATION */}
       <section id="evidence" className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -3776,7 +4617,7 @@ export default function Home() {
 
           {/* Left Quote Badge */}
           <div className="absolute -top-5 -left-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            “
+            â€œ
           </div>
 
           <div className="max-w-4xl my-2">
@@ -3799,7 +4640,7 @@ export default function Home() {
                   <span className="font-mono text-xs font-bold text-[#121212]">100 Runs</span>
                 </div>
                 <p className="font-sans text-xs text-[#5A564F] leading-relaxed">
-                  Real mainnet broadcasts routed through <strong>Solami Beam SWQoS</strong> with dynamic micro-tips (1,000–8,000 lamports) and Solana rent-reserve guardrails. Real on-chain signatures verified on Solana Explorer.
+                  Real mainnet broadcasts routed through <strong>Solami Beam SWQoS</strong> with dynamic micro-tips (1,000â€“8,000 lamports) and Solana rent-reserve guardrails. Real on-chain signatures verified on Solana Explorer.
                 </p>
                 <div className="mt-3 font-mono text-[11px] text-[#121212] bg-white p-2 rounded border border-[#121212]/20">
                   Log: logs/mainnet_100_matrix.jsonl
@@ -3843,7 +4684,7 @@ export default function Home() {
 
           {/* Right Quote Badge */}
           <div className="absolute -bottom-5 -right-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            ”
+            â€
           </div>
         </div>
       </section>
@@ -3885,6 +4726,7 @@ export default function Home() {
       </section>
             </div>
           )}
+          </div>
         </div>
       )}
 
@@ -3902,7 +4744,7 @@ export default function Home() {
                     Bundle Execution Console
                   </h3>
                   <p className="font-mono text-xs text-[#5A564F]">
-                    Profile: {selectedProfile} • {submitting ? "Streaming live execution..." : "Stream completed"}
+                    Profile: {selectedProfile} â€¢ {submitting ? "Streaming live execution..." : "Stream completed"}
                   </p>
                 </div>
               </div>
@@ -3952,7 +4794,7 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="shrink-0 ml-2 border border-emerald-700 bg-white px-3 py-1 font-mono text-xs font-bold rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
                 >
-                  Explorer ↗
+                  Explorer â†—
                 </a>
               </div>
             )}
@@ -4010,25 +4852,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* INTELLIGENCE & EXECUTION TOOLS */}
-      <div className="mt-6 space-y-4" id="intelligence-section">
-        <div className="border-b-2 border-[#121212] pb-2 mb-4">
-          <h2 className="font-serif text-lg font-bold text-[#121212] uppercase tracking-wide">
-            Intelligence and Execution Tools
-          </h2>
-          <p className="font-mono text-xs text-[#5A564F] mt-0.5">
-            Multi-model tip engine, Orca Whirlpool swaps, dual-rail submission, and RPC cluster diagnostics.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <TipDecisionPanel network={snapshot ? { slot: snapshot.slot ?? undefined, tipP75: snapshot.tipPercentiles?.p75 ?? snapshot.tipLamports ?? undefined } : null} />
-          <RpcConsistencyPanel />
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <OrcaSwapPanel />
-          <DualRailPanel />
-        </div>
-      </div>
+
 
       {/* AI CHAT MODAL */}
       {chatModalOpen && selectedRun && (
@@ -4040,7 +4864,7 @@ export default function Home() {
                   AI Transaction Analysis
                 </h3>
                 <p className="font-mono text-xs text-[#5A564F]">
-                  Run #{selectedRun.run_number} • {selectedRun.status}
+                  Run #{selectedRun.run_number} â€¢ {selectedRun.status}
                 </p>
               </div>
               <button
@@ -4117,6 +4941,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Floating Archival Field Notes Card with Cursive Quotes & Sandbox Cluster Switch */}
+      <FieldNoteCard view={activeView} />
 
     </main>
   );

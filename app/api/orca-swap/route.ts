@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
 
@@ -53,7 +53,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
+    let message = err instanceof Error ? err.message : String(err);
+    if (message.includes("insufficient lamports")) {
+      const match = message.match(/insufficient lamports (\d+), need (\d+)/i);
+      if (match) {
+        const available = (Number(match[1]) / 1e9).toFixed(5);
+        const needed = (Number(match[2]) / 1e9).toFixed(5);
+        message = `Insufficient wallet balance: current balance is ${available} SOL, but ${needed} SOL is required for token account rent exemption and swap fee.`;
+      } else {
+        message = "Insufficient wallet balance to cover token account rent exemption and swap amount.";
+      }
+    }
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

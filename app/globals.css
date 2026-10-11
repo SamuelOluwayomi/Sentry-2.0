@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -105,4 +105,18 @@
   background-color: #121212;
   color: #F7F4EC;
   border: 2px solid #121212;
+}
+
+/* Architectural Checkered Drafting Grid Background */
+.bg-drafting-grid {
+  background-color: #F7F4EC;
+  background-image: 
+    linear-gradient(to right, rgba(18, 18, 18, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(18, 18, 18, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+
+.font-cursive {
+  font-family: 'Caveat', 'Fraunces', cursive, Georgia, serif;
 }
