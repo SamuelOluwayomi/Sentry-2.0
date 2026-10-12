@@ -117,3 +117,23 @@ To empirically validate Solami's low-latency performance against public RPC infr
 - **Solami Slot Lead Margin (`solamiAdvantageSlots`)**: Quantifies the real-time slot lead Solami maintains over public nodes, demonstrating earlier visibility into on-chain state changes.
 - **Response Latency Profiling**: Measures round-trip ping time per node, verifying sub-millisecond to low-millisecond response guarantees.
 - **Live UI & API Exposure**: Accessible via `GET /api/rpc-check` and visualized in real time on the Observatory Dashboard.
+
+
+---
+
+## 4. Multi-Stage Latency Waterfall & Cluster Validation Scope
+
+### Multi-Stage Latency Waterfall
+Claims of low latency must distinguish local CPU dispatch from physical speed-of-light network transit:
+
+1. **Local Hot-Path Routing & Cuckoo Deduplication**: `< 1 ms` (in-memory TypeScript/V8 and Rust filter evaluation).
+2. **Network Transport Round-Trip (RTT)**: `15 - 45 ms` (physical TCP/QUIC transit over WAN to validator TPU sockets).
+3. **Leader Block Inclusion & Slot Consensus**: `400 - 800 ms` (Solana 400ms slot duration to confirmed commitment).
+
+### Disaggregating Compute Budget Fees vs. Dynamic Tips
+- **Compute Budget Priority Fees**: Sentry sets a base compute unit limit and price (typically 5,000 lamports base fee) to ensure execution inside local validator compute budgets.
+- **Solami Beam Dynamic Tips**: Dispatched out-of-band directly to active Solami Beam validator tip accounts (`...beam`), ranging empirically from **1,423 to 8,000 lamports** on Mainnet based on live Jito percentiles.
+
+### Cluster Validation Scope (Mainnet vs. Devnet)
+- **Mainnet-Beta Matrix (100 Runs)**: Validates genuine Stake-Weighted Quality of Service (SWQoS) TPU leader routing through Solami Beam with real SOL tips and Solscan-verifiable finality.
+- **Devnet Stress Matrix (1,020 Runs)**: Validates transaction pipeline assembly, preflight simulations, and Cuckoo filter eviction under synthetic high volume. (Devnet does not operate SWQoS stake-weighted TPU leader schedules).

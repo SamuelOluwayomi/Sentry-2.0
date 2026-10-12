@@ -144,7 +144,9 @@ Response:
 
 Sequential fallback (try Beam, then Jito, then RPC) adds latency at exactly the worst moment. During a congestion spike, the first provider may time out after several seconds, at which point the blockhash has aged and the retry lands in a degraded state.
 
-The dual-rail pattern fires all three submission rails simultaneously using `Promise.allSettled` and returns the first successful result. The remaining rails are silently abandoned.
+The dual-rail pattern broadcasts the **exact same pre-signed transaction bytes** (identical 64-byte Ed25519 signature) simultaneously across Solami Beam SWQoS priority TPU and secondary RPC rails using `Promise.allSettled`. 
+
+Because identical transaction bytes share the same signature, Solana validators enforce protocol-level signature deduplication in their 150-slot recent blockhash cache. Whichever rail reaches the leader first commits the transaction; subsequent arrivals are dropped by the validator without double-spending. Each route's submission acknowledgement is tracked independently, and cancelling secondary HTTP sockets cleans up local network resources without affecting on-chain finality.
 
 ### Submission Order
 

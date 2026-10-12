@@ -300,7 +300,13 @@ export default function DashboardPage() {
               })}
               </nav>
 
-              <div className="border-t-2 border-[#121212] p-3 sm:p-4">
+              <div className="border-t-2 border-[#121212] p-3 sm:p-4 space-y-2">
+                <Link
+                  href="/runs"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-xl border-2 border-[#121212] bg-white font-mono text-xs font-bold text-[#121212] hover:bg-[#F7F4EC]"
+                >
+                  Benchmark Runs
+                </Link>
                 <a
                   href="https://sentryacademydocs.vercel.app/"
                   target="_blank"

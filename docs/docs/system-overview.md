@@ -20,7 +20,7 @@ On Solana, transactions submitted through standard public RPC nodes during perio
 
 While conventional alert bots passively monitor the chain and emit delayed notifications to Discord or Telegram, **Sentry 2.0 closes the autonomous execution loop**:
 - **Senses** real-time network volatility via Solami Private RPC and native WebSocket streams.
-- **Deduplicates** transaction attempts in sub-50ns using a mathematical partial-key Cuckoo filter.
+- **Deduplicates** transaction attempts in ~150-300ns in-memory using a mathematical partial-key Cuckoo filter.
 - **Evaluates** dynamic safety policies and out-of-band market intelligence with Groq LPU hardware acceleration.
 - **Lands** priority transactions on-chain via Solami Beam's Stake-Weighted Quality of Service (SWQoS) TPU pipeline.
 - **Proves** every execution result cryptographically through an append-only, SHA-256 hash-chained and Ed25519-signed receipt ledger.
@@ -44,8 +44,8 @@ Sentry 2.0 is architected directly around Solami's operational principle:
 
 ## 3. Core Pillars of Sentry 2.0
 
-### Sub-50ns Preflight Deduplication (Cuckoo Filter)
-Implements a partial-key Cuckoo filter (`lib/cuckoo-filter.ts`) with 4 slots per bucket, 16-bit FNV-1a fingerprints, and power-of-2 bucket sizing. Features a 150-slot sliding window deduplicator that matches Solana's blockhash lifetime. Intercepts duplicate transaction submissions in under 50 nanoseconds before touching RPC or spending gas.
+### In-Memory Preflight Deduplication (Cuckoo Filter)
+Implements a partial-key Cuckoo filter (`lib/cuckoo-filter.ts`) with 4 slots per bucket, 16-bit FNV-1a fingerprints, and power-of-2 bucket sizing. Features a 150-slot sliding window deduplicator that matches Solana's blockhash lifetime. Intercepts duplicate transaction submissions in ~150-300 nanoseconds before touching RPC or spending gas.
 
 ### Decoupled Hot Execution Path vs. Cold Telemetry Path
 - **Deterministic Hot Path (sub-1ms)**: Zero network calls to remote AI. Runs locally inside Node.js and the native Rust engine. Handles Cuckoo deduplication, SIMD-0047 rent protection, circuit breaker gating, dynamic tip calculation, and Solami Beam dispatch.

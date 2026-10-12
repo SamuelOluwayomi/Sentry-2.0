@@ -10,7 +10,7 @@ Sentry 2.0 is built on the principle of **strict latency decoupling**.
 In high-frequency decentralized finance, market conditions shift in fractions of a slot (~400ms). If an execution engine attempts to make a remote HTTP request to an AI model while preparing a transaction, the network blockhash expires, liquidity pools move, and the transaction fails.
 
 To solve this, Sentry 2.0 introduces a dual-path architecture:
-- **The Deterministic Hot Path (sub-1ms)**: Executes entirely locally. Evaluates the sub-50ns Cuckoo filter deduplicator, checks deterministic safety gates (SIMD-0047 rent floors, circuit breakers), queries dynamic tip caches, and dispatches directly to Solami Beam's SWQoS TPU socket.
+- **The Deterministic Hot Path (sub-1ms)**: Executes entirely locally. Evaluates the in-memory Cuckoo filter (~150-300ns) deduplicator, checks deterministic safety gates (SIMD-0047 rent floors, circuit breakers), queries dynamic tip caches, and dispatches directly to Solami Beam's SWQoS TPU socket.
 - **The Cognitive Cold Path (Groq LPU)**: Runs asynchronously out-of-band. Processes telemetry batches, audits execution receipts, performs root-cause classification on failed transactions, and tunes macro policies without ever blocking active transactions.
 
 ---
@@ -27,7 +27,7 @@ graph TD
     end
 
     %% Preflight & Gate Layer
-    subgraph GATE [2. Sub-50ns Preflight & Safety Gates]
+    subgraph GATE [2. In-Memory Preflight (~150-300ns) & Safety Gates]
         STREAM --> DEDUP{Cuckoo Filter Sub-50ns}
         DEDUP -->|Duplicate Detected| SUPPRESS[Suppressed: 0 Gas Spent]
         DEDUP -->|Unique Transaction| POLICY{Deterministic Policy Engine}

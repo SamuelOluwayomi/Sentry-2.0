@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -3281,6 +3282,12 @@ export default function Home() {
           </button>
 
           <nav className="ml-auto hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
+            <Link
+              href="/runs"
+              className="text-[#121212] font-bold hover:underline flex items-center gap-1"
+            >
+              <span>Benchmark Runs</span>
+            </Link>
             <a
               href="https://sentryacademydocs.vercel.app/"
               target="_blank"
@@ -3581,6 +3588,12 @@ export default function Home() {
               <GraduationCap size={15} weight="bold" />
               Get Started
             </a>
+            <Link
+              href="/runs"
+              className="flex h-11 w-full items-center justify-center rounded-xl border-2 border-[#121212] bg-white px-4 font-serif text-sm font-bold text-[#121212] shadow-[2px_2px_0px_#121212]"
+            >
+              Benchmark Runs
+            </Link>
             <a
               href="https://sentryacademydocs.vercel.app/"
               target="_blank"
@@ -3993,6 +4006,12 @@ export default function Home() {
                 >
                   Intelligence & Proof
                 </button>
+                <Link
+                  href="/runs"
+                  className="hover:text-[#FF5A26] transition-colors"
+                >
+                  Benchmark Runs
+                </Link>
                 <a
                   href="https://sentryacademydocs.vercel.app/"
                   target="_blank"
