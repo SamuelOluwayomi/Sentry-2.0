@@ -299,7 +299,7 @@ export async function executeAction(params: {
 }
 
 
-// ── Jupiter v6 Swap Strategy (via Solami Beam) ───────────────────────────────
+// ── Jupiter v6 Swap Strategy (via Solami Beam) ─
 // Executes a real token swap on mainnet using the Jupiter Aggregator v6 API.
 // The signed transaction is broadcast through Solami Beam for priority landing.
 export async function executeJupiterSwap(params: {

@@ -32,7 +32,7 @@ const LEDGERS = {
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+//  Helpers 
 
 function redactUrl(url) {
   if (!url) return "Not set";
@@ -130,7 +130,7 @@ function runScript(scriptRel, args = []) {
   });
 }
 
-// ─── status ───────────────────────────────────────────────────────────────────
+//  status ─
 
 async function runStatus() {
   console.log(`${c.bold}Infrastructure Configuration${c.reset}`);
@@ -188,7 +188,7 @@ async function runStatus() {
   console.log(`\n${c.dim}Run 'sentry ledger' to recompute the receipt hash chains.${c.reset}\n`);
 }
 
-// ─── ledger ───────────────────────────────────────────────────────────────────
+//  ledger ─
 
 function verifyLedger(name, kp) {
   const files = LEDGERS[name];
@@ -253,7 +253,7 @@ function runLedger(which) {
   console.log(all ? ok("All ledgers intact.\n") : bad("Ledger integrity problems detected.\n"));
 }
 
-// ─── verify ───────────────────────────────────────────────────────────────────
+//  verify ─
 
 async function runVerify(signature) {
   if (!signature) {
@@ -291,7 +291,7 @@ async function runVerify(signature) {
   console.log(`  Explorer:   https://explorer.solana.com/tx/${signature}\n`);
 }
 
-// ─── analyze ──────────────────────────────────────────────────────────────────
+//  analyze 
 
 function runAnalyze(target) {
   const which = target === "devnet" ? "devnet" : "mainnet";
@@ -332,7 +332,7 @@ function runAnalyze(target) {
   console.log(`========================================================================\n`);
 }
 
-// ─── evidence ─────────────────────────────────────────────────────────────────
+//  evidence ──
 
 function runEvidence() {
   const mSum = readJson(LEDGERS.mainnet.summary);
@@ -414,7 +414,7 @@ sentry verify ${landedRun1.signature || "2H96SusAJn4udUHn38KLoBxQecxg7b1eFt6223X
   console.log(`${ok("Generated evidence.md")} (${path.relative(projectRoot, outPath)})`);
 }
 
-// ─── benchmark (guarded) ──────────────────────────────────────────────────────
+//  benchmark (guarded) 
 
 async function runBenchmark(parts) {
   const target = parts[1];
@@ -448,7 +448,7 @@ async function runBenchmark(parts) {
   return runScript("scripts/benchmark_100_mainnet.ts");
 }
 
-// ─── replay ───────────────────────────────────────────────────────────────────
+//  replay ─
 
 function runReplay(parts) {
   const n = parts[1];

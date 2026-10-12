@@ -1,17 +1,17 @@
 /**
- * ============================================================================
+ *
  * Smart TX Observatory — Autonomous AI Agent
  * Superteam Nigeria | Advanced Infrastructure Challenge
- * ============================================================================
+ *
  *
  * ARCHITECTURE: TWO-TIER REASONING PIPELINE
- * ─────────────────────────────────────────
+ * ──
  * This agent is NOT a sequential wrapper. It implements a two-tier reasoning
  * pipeline where every operational decision passes through two independent
  * reasoning layers before being committed to disk:
  *
  *  TIER 1 — Local Rules Engine (deterministic, always runs)
- *  ─────────────────────────────────────────────────────────
+ *  
  *  Reads from lifecycle_log.jsonl, computes metrics over the last 10 runs:
  *    • landedRate          — ratio of Landed bundles to total submissions
  *    • avgDeltaMs          — mean Processed→Confirmed latency (congestion signal)
@@ -28,7 +28,7 @@
  *  Output: a full AgentDecision with action, tip, confidence, reason, observed_risk.
  *
  *  TIER 2 — Groq LLM Chain (enhances or overrides the local decision)
- *  ────────────────────────────────────────────────────────────────────
+ *  ──
  *  The local decision + full observed state are forwarded to a Groq LLM
  *  (primary: openai/gpt-oss-120b → fallback: llama-3.3-70b-versatile →
  *   last-resort: llama-3.1-8b-instant) with a structured JSON prompt
@@ -43,13 +43,13 @@
  *  engine. Its output is validated, bounds-clamped, and written to disk.
  *
  *  FALLBACK BEHAVIOUR
- *  ──────────────────
+ *  
  *  If all Groq models fail (network error, rate-limit, malformed JSON), the
  *  local decision is used with fallback: true. No hardcoded retry flow exists —
  *  every retry decision originates from the reasoning pipeline above.
  *
  *  DECISION OUTPUT CONTRACT
- *  ────────────────────────
+ *  
  *  Written to agent_decisions.jsonl as a newline-delimited JSON record:
  *  {
  *    "id":                      string  (UUID v4),
@@ -62,7 +62,7 @@
  *    "reason":                  string  (one sentence, human-readable),
  *    "observed_risk":           string  (one sentence risk assessment)
  *  }
- * ============================================================================
+ *
  */
 
 import { readFileSync, existsSync, appendFileSync, mkdirSync } from "node:fs";
@@ -240,8 +240,8 @@ function analyzeState(
     );
   const avgDeltaMs = lifecycleDeltas.length
     ? Math.round(
-        lifecycleDeltas.reduce((a, b) => a + b, 0) / lifecycleDeltas.length
-      )
+      lifecycleDeltas.reduce((a, b) => a + b, 0) / lifecycleDeltas.length
+    )
     : null;
 
   // Failure pattern analysis
@@ -471,7 +471,7 @@ async function makeGroqDecision(
             Math.round(
               Number(
                 parsed.recommended_tip_lamports ??
-                  localDecision.recommended_tip_lamports
+                localDecision.recommended_tip_lamports
               )
             ),
             30_000

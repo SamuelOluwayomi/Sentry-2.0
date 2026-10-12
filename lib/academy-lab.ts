@@ -17,11 +17,12 @@ import {
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export type AcademyNetwork = "devnet" | "testnet";
+export type AcademyNetwork = "mainnet" | "devnet" | "testnet";
 
-export const ACADEMY_NETWORKS: AcademyNetwork[] = ["devnet", "testnet"];
+export const ACADEMY_NETWORKS: AcademyNetwork[] = ["mainnet", "devnet", "testnet"];
 
 const DEFAULT_ENDPOINTS: Record<AcademyNetwork, string> = {
+  mainnet: process.env.NEXT_PUBLIC_MAINNET_RPC ?? "https://api.mainnet-beta.solana.com",
   devnet: "https://api.devnet.solana.com",
   testnet: "https://api.testnet.solana.com",
 };
@@ -30,12 +31,17 @@ const DEFAULT_ENDPOINTS: Record<AcademyNetwork, string> = {
 const ORCA_DEVNET_SOL_DEVUSDC = "3KBZiL2g8C7tiJ32hTv5v3KM7aK9htpqTw4cTXz1HvPt";
 
 export function isAcademyNetwork(value: unknown): value is AcademyNetwork {
-  return value === "devnet" || value === "testnet";
+  return value === "mainnet" || value === "devnet" || value === "testnet";
 }
 
 /** Primary endpoint plus any extra endpoints configured via env (comma separated). */
 export function getEndpoints(network: AcademyNetwork): { name: string; url: string }[] {
-  const envKey = network === "devnet" ? "ACADEMY_DEVNET_RPC_URLS" : "ACADEMY_TESTNET_RPC_URLS";
+  const envKey =
+    network === "mainnet"
+      ? "NEXT_PUBLIC_MAINNET_RPC"
+      : network === "devnet"
+      ? "ACADEMY_DEVNET_RPC_URLS"
+      : "ACADEMY_TESTNET_RPC_URLS";
   const extras = (process.env[envKey] ?? "")
     .split(",")
     .map((u) => u.trim())
@@ -60,6 +66,9 @@ function primaryConnection(network: AcademyNetwork) {
 }
 
 export function explorerUrl(kind: "tx" | "address", value: string, network: AcademyNetwork) {
+  if (network === "mainnet") {
+    return `https://explorer.solana.com/${kind}/${value}`;
+  }
   return `https://explorer.solana.com/${kind}/${value}?cluster=${network}`;
 }
 
@@ -236,6 +245,12 @@ export async function labWallet(network: AcademyNetwork) {
 
 /** Lesson 2: faucet airdrop. Public faucets are rate limited; errors are expected and explained. */
 export async function labAirdrop(network: AcademyNetwork, target?: string) {
+  if (network === "mainnet") {
+    return {
+      ok: false,
+      error: "Airdrops are not available on Solana Mainnet. Switch the cluster toggle above to Devnet to test airdrops.",
+    };
+  }
   const kp = await getSandboxKeypair();
   const connection = primaryConnection(network);
   const recipient = target ? new PublicKey(target) : kp.publicKey;

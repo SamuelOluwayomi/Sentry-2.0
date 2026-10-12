@@ -65,7 +65,7 @@ function heuristicTip(state: NetworkState): TipDecision {
   };
 }
 
-// ── Provider implementations ──────────────────────────────────────────────
+// ── Provider implementations 
 
 async function tryGroq(prompt: string): Promise<TipDecision | null> {
   const key = process.env.GROQ_API_KEY;

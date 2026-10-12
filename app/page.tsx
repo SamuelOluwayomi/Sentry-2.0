@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
@@ -29,7 +30,7 @@ import {
   X,
 } from "./components/phosphor-icons";
 import { useWalletConnection } from "@solana/react-hooks";
-import { CheckeredBorder, CheckeredTextRibbon, CheckeredGridBackground } from "./components/checkered-border";
+import { CheckeredGridBackground } from "./components/checkered-border";
 import { TaskDialogModal, TaskActionCard, LiveTestStageList } from "./components/task-dialog";
 import { ScrollReveal, ScrollProgressBar } from "./components/scroll-reveal";
 import { AcademyTrackSection } from "./components/academy/academy-track-section";
@@ -47,11 +48,11 @@ const parseInline = (text: string) => {
 
   html = html.replace(
     /\*\*(.*?)\*\*/g,
-    '<strong class="font-bold text-[#121212]">$1</strong>'
+    '<strong class="font-bold text-inherit">$1</strong>'
   );
   html = html.replace(
     /__(.*?)__/g,
-    '<strong class="font-bold text-[#121212]">$1</strong>'
+    '<strong class="font-bold text-inherit">$1</strong>'
   );
   html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
   html = html.replace(/_(.*?)_/g, '<em class="italic">$1</em>');
@@ -116,7 +117,7 @@ const renderMarkdown = (text: string) => {
         elements.push(
           <p
             key={`p-block-${key}`}
-            className="mb-3 leading-relaxed break-words text-[#121212] font-sans text-sm last:mb-0"
+            className="mb-3 leading-relaxed break-words text-inherit font-sans text-sm last:mb-0"
           >
             {parseInline(pContent)}
           </p>
@@ -156,7 +157,7 @@ const renderMarkdown = (text: string) => {
       const titleText = headerMatch[2];
 
       let headerClass =
-        "font-serif font-bold text-[#121212] mt-4 mb-2 break-words ";
+        "font-serif font-bold text-inherit mt-4 mb-2 break-words ";
       if (level === 1)
         headerClass += "text-base uppercase border-b-2 border-[#121212] pb-1";
       else if (level === 2) headerClass += "text-sm uppercase";
@@ -401,8 +402,7 @@ const formatDuration = (value: number | null | undefined) =>
 const shortId = (value: string) =>
   value ? `${value.slice(0, 6)}...${value.slice(-6)}` : "--";
 
-
-// â”€â”€ Autonomous types (matching backend) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Autonomous types
 type ExecutionMode = "observe" | "shadow" | "live";
 type FaultType =
   | "expired_blockhash"
@@ -524,7 +524,7 @@ interface NetworkState {
   timeSinceLastSuccessSecs: number;
 }
 
-// â”€â”€ RPC Consistency Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  RPC Consistency Panel 
 function RpcConsistencyPanel() {
   const [report, setReport] = React.useState<ConsistencyReport | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -665,7 +665,7 @@ function RpcConsistencyPanel() {
                       >
                         <td className="px-4 py-2.5">{r.name}</td>
                         <td className="px-4 py-2.5 text-right tabular-nums">
-                          {r.slot > 0 ? r.slot.toLocaleString() : "â€”"}
+                          {r.slot > 0 ? r.slot.toLocaleString() : ""}
                         </td>
                         <td className={`px-4 py-2.5 text-right tabular-nums ${r.slotLag === 0 ? "text-emerald-700 font-bold" : "text-amber-800"}`}>
                           {r.slot > 0 ? (r.slotLag === 0 ? "fastest" : `+${r.slotLag}`) : "error"}
@@ -685,7 +685,7 @@ function RpcConsistencyPanel() {
   );
 }
 
-// â”€â”€ Tip Decision Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Tip Decision Panel 
 function TipDecisionPanel({ network }: { network: { slot?: number; tipP75?: number; regime?: string } | null }) {
   const [state, setState] = React.useState<NetworkState>({
     currentSlot: network?.slot ?? 0,
@@ -707,9 +707,9 @@ function TipDecisionPanel({ network }: { network: { slot?: number; tipP75?: numb
   }, [network]);
 
   const stages = [
-    { id: "s1", label: "Evaluating live slot & congestion regime", detail: `Slot ${state.currentSlot || "Mainnet live"} â€¢ Regime ${network?.regime || "Normal"}` },
+    { id: "s1", label: "Evaluating live slot & congestion regime", detail: `Slot ${state.currentSlot || "Mainnet live"} ¢ Regime ${network?.regime || "Normal"}` },
     { id: "s2", label: "Querying Groq LPU primary model (Llama-3.3-70b)", detail: "Evaluating hardware-accelerated decision trail" },
-    { id: "s3", label: "Computing Jito inclusion probability curves", detail: `Floor: ${state.tipMin.toLocaleString()} â€¢ Cap: ${state.tipMax.toLocaleString()} lamports` },
+    { id: "s3", label: "Computing Jito inclusion probability curves", detail: `Floor: ${state.tipMin.toLocaleString()} ¢ Cap: ${state.tipMax.toLocaleString()} lamports` },
     { id: "s4", label: "Applying Solana rent-reserve safety invariant", detail: "Formulating optimal dynamic tip recommendation" },
   ];
 
@@ -872,7 +872,7 @@ function TipDecisionPanel({ network }: { network: { slot?: number; tipP75?: numb
   );
 }
 
-// â”€â”€ Orca Whirlpool Swap Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Orca Whirlpool Swap Panel 
 function OrcaSwapPanel() {
   const [poolKey, setPoolKey] = React.useState("SOL_USDC");
   const [aToB, setAToB] = React.useState(true);
@@ -893,7 +893,7 @@ function OrcaSwapPanel() {
 
   const stages = [
     { id: "s1", label: "Fetching Whirlpool pool address & tick arrays", detail: `Pool: ${POOLS[poolKey]?.slice(0, 16)}...` },
-    { id: "s2", label: "Computing concentrated liquidity quote", detail: `${amountSol} SOL â€¢ Slippage constraint: ${slippage}%` },
+    { id: "s2", label: "Computing concentrated liquidity quote", detail: `${amountSol} SOL ¢ Slippage constraint: ${slippage}%` },
     { id: "s3", label: "Constructing Beam-compliant swap instruction", detail: "Encoding Solami Beam SWQoS routing header" },
     { id: "s4", label: "Broadcasting and verifying sub-slot inclusion", detail: "Awaiting final confirmation on Solana Mainnet" },
   ];
@@ -1073,7 +1073,7 @@ function OrcaSwapPanel() {
                   rel="noopener noreferrer"
                   className="font-mono text-xs text-[#FF5A26] underline break-all font-bold hover:text-[#121212]"
                 >
-                  {sig} â†—
+                  {sig}
                 </a>
               </div>
             )}
@@ -1084,7 +1084,7 @@ function OrcaSwapPanel() {
   );
 }
 
-// â”€â”€ Dual-Rail Status Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+//  Dual-Rail Status Panel 
 function DualRailPanel() {
   const [log, setLog] = React.useState<Array<{ winner: string; landingMs: number; sig: string; ts: string }>>([]);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -1415,7 +1415,7 @@ function AutonomousSection() {
           <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
             Event Engine Control Center
           </h2>
-          <CheckeredTextRibbon variant="diagonal-lines" caption="STAGE 02 / AUTONOMOUS TELEMETRY" />
+          <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
           <p className="font-sans text-sm text-[#5A564F] mt-2 max-w-2xl">
             Sentry reacts to on-chain events without user input. Select execution
             mode, watch the live event feed, and inspect each decision from trigger
@@ -1442,7 +1442,7 @@ function AutonomousSection() {
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { label: "Yellowstone", ok: health?.stream?.yellowstone ?? true },
               { label: "Blur", ok: health?.stream?.blur ?? true },
@@ -1497,10 +1497,10 @@ function AutonomousSection() {
           </div>
           <p className="mt-2.5 font-sans text-xs sm:text-sm text-[#5A564F] leading-relaxed">
             Sentry monitors blocks via <strong>Solami Blur</strong> and <strong>Yellowstone gRPC</strong>. 
-            Every event is scored for opportunity (0â€“100), checked against safety policy rules (rent floor buffer &ge; 0.0007 SOL, daily spend, rate limit), 
+            Every event is scored for opportunity (0“100), checked against safety policy rules (rent floor buffer &ge; 0.0007 SOL, daily spend, rate limit), 
             priced with dynamic <strong>Solami Beam priority tips</strong>, and sealed with tamper-evident cryptographic receipts.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-2">
             <div className="p-3 border-2 border-[#121212]/15 bg-white rounded-xl">
               <span className="font-mono text-xs font-bold uppercase text-[#5A564F]">1. Observe Mode</span>
               <p className="mt-1 font-sans text-xs text-[#5A564F]">
@@ -1543,7 +1543,7 @@ function AutonomousSection() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {([
               { id: "observe" as const, label: "Observe", desc: "Ingest events, evaluate policy, never execute. Safe for audit." },
               { id: "shadow" as const, label: "Shadow", desc: "Full pipeline runs but no transaction is sent to chain." },
@@ -2109,12 +2109,12 @@ function ExplainerSections({
 }) {
   return (
     <div id="explainer-story" className="w-full">
-      {/* ==============================================================
+      {/*
           EXPLAINER 01: ROOT CAUSE ANALYSIS (LEFT-ALIGNED)
-      ============================================================== */}
+      */}
       <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="diagonal-lines" opacity={1} />
-        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[1.15fr_0.85fr] gap-10 lg:gap-14 items-center">
+        <div className="relative z-10 mx-auto max-w-7xl grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14 items-center">
           {/* Left Column (Editorial Content) */}
           <div>
             <div className="inline-flex items-center gap-2 mb-3">
@@ -2133,9 +2133,9 @@ function ExplainerSections({
               </span>
             </h2>
 
-            {/* Checkered Border (Stage 02: 45Â° Diagonal Lines) */}
+            {/* Checkered Border (Stage 02: 45° Diagonal Lines) */}
             <ScrollReveal animation="fade-up" delay={50}>
-              <CheckeredTextRibbon variant="diagonal-lines" caption="STAGE 02 / DIAGONAL HATCH" />
+              <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
             </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
@@ -2199,15 +2199,14 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: DIAGONAL-LINES CHECKERED BORDER */}
       <div className="w-full border-b-2 border-[#121212] bg-[#FFFFFF]">
-        <CheckeredBorder variant="diagonal-lines" height={16} />
       </div>
 
-      {/* ==============================================================
+      {/*
           EXPLAINER 02: THE SENTRY 2.0 STACK (RIGHT-ALIGNED)
-      ============================================================== */}
+      */}
       <section className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="diagonal-reverse" opacity={1} />
-        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[0.85fr_1.15fr] gap-10 lg:gap-14 items-center">
+        <div className="relative z-10 mx-auto max-w-7xl grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14 items-center">
           {/* Left Column (Visual Architecture Pillars) */}
           <div className="order-2 lg:order-1 space-y-4">
             <div className="border-2 border-[#121212] bg-[#FFFFFF] p-5 rounded-2xl">
@@ -2265,9 +2264,9 @@ function ExplainerSections({
               </span>
             </h2>
 
-            {/* Checkered Border (Stage 03: -45Â° Reverse Diagonal Lines) */}
+            {/* Checkered Border (Stage 03: -45° Reverse Diagonal Lines) */}
             <ScrollReveal animation="fade-up" delay={50}>
-              <CheckeredTextRibbon variant="diagonal-reverse" caption="STAGE 03 / REVERSE HATCH" />
+              <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
             </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
@@ -2295,15 +2294,14 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: REVERSE DIAGONAL CHECKERED BORDER */}
       <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
-        <CheckeredBorder variant="diagonal-reverse" height={16} />
       </div>
 
-      {/* ==============================================================
+      {/*
           EXPLAINER 03: OPERATIONAL CAPABILITIES (LEFT-ALIGNED)
-      ============================================================== */}
+      */}
       <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="cross-hatch" opacity={1} />
-        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-14 items-center">
+        <div className="relative z-10 mx-auto max-w-7xl grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14 items-center">
           {/* Left Column (Content) */}
           <div>
             <div className="inline-flex items-center gap-2 mb-3">
@@ -2324,7 +2322,7 @@ function ExplainerSections({
 
             {/* Checkered Border (Stage 04: Intersecting Cross-Hatch) */}
             <ScrollReveal animation="fade-up" delay={50}>
-              <CheckeredTextRibbon variant="cross-hatch" caption="STAGE 04 / CROSS-HATCH" />
+              <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
             </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
@@ -2340,13 +2338,13 @@ function ExplainerSections({
                 onClick={() => navigateTo("console", "#mission-profiles")}
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
               >
-                <span>Launch Mission Console â†’</span>
+                <span>Launch Mission Console ’</span>
               </button>
               <button
                 onClick={() => navigateTo("autonomous")}
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] text-[#121212] px-5 font-serif text-xs sm:text-sm font-bold rounded-xl hover:bg-white transition-colors"
               >
-                <span>Open Autonomous Engine â†’</span>
+                <span>Open Autonomous Engine ’</span>
               </button>
             </div>
           </div>
@@ -2369,7 +2367,7 @@ function ExplainerSections({
                 onClick={() => navigateTo("console", "#mission-profiles")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Open Profiles â†’
+                Open Profiles ’
               </button>
             </div>
 
@@ -2389,7 +2387,7 @@ function ExplainerSections({
                 onClick={() => navigateTo("autonomous", "#autonomous-mode")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Switch Modes â†’
+                Switch Modes ’
               </button>
             </div>
 
@@ -2402,14 +2400,14 @@ function ExplainerSections({
                   Live Blur DEX Stream
                 </h4>
                 <p className="font-sans text-sm text-[#5A564F] mt-1.5 leading-relaxed">
-                  Stream pre-block token swaps with real-time opportunity scoring (0â€“100) and automated policy gating.
+                  Stream pre-block token swaps with real-time opportunity scoring (0“100) and automated policy gating.
                 </p>
               </div>
               <button
                 onClick={() => navigateTo("autonomous", "#autonomous-events")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                View Stream â†’
+                View Stream ’
               </button>
             </div>
 
@@ -2429,7 +2427,7 @@ function ExplainerSections({
                 onClick={() => navigateTo("autonomous", "#autonomous-lab")}
                 className="mt-4 font-mono text-xs font-bold text-[#FF5A26] hover:underline text-left"
               >
-                Launch Lab â†’
+                Launch Lab ’
               </button>
             </div>
           </div>
@@ -2438,15 +2436,14 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: CROSS-HATCH CHECKERED BORDER */}
       <div className="w-full border-b-2 border-[#121212] bg-[#FFFFFF]">
-        <CheckeredBorder variant="cross-hatch" height={16} />
       </div>
 
-      {/* ==============================================================
+      {/*
           EXPLAINER 04: DECISION PROVENANCE (RIGHT-ALIGNED)
-      ============================================================== */}
+      */}
       <section className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="diagonal-dense" opacity={1} />
-        <div className="relative z-10 mx-auto max-w-7xl grid lg:grid-cols-[0.9fr_1.1fr] gap-10 lg:gap-14 items-center">
+        <div className="relative z-10 mx-auto max-w-7xl grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 items-center">
           {/* Left Column (Visual Causal Chain Nodes) */}
           <div className="order-2 lg:order-1 space-y-3">
             {[
@@ -2493,7 +2490,7 @@ function ExplainerSections({
 
             {/* Checkered Border (Stage 05: Dense Diagonal Razor Stripes) */}
             <ScrollReveal animation="fade-up" delay={50}>
-              <CheckeredTextRibbon variant="diagonal-dense" caption="STAGE 05 / DENSE STRIPES" />
+              <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
             </ScrollReveal>
 
             <p className="mt-4 font-sans text-base text-[#5A564F] max-w-xl">
@@ -2510,7 +2507,7 @@ function ExplainerSections({
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-5 font-serif text-xs sm:text-sm font-bold text-[#121212] rounded-xl hover:bg-[#121212] hover:text-white transition-colors"
               >
                 <ArrowSquareOut size={15} weight="bold" />
-                <span>Inspect Live Receipts â†’</span>
+                <span>Inspect Live Receipts ’</span>
               </button>
             </div>
           </div>
@@ -2519,12 +2516,11 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: DENSE DIAGONAL CHECKERED BORDER */}
       <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
-        <CheckeredBorder variant="diagonal-dense" height={16} />
       </div>
 
-      {/* ==============================================================
+      {/*
           EXPLAINER 05: EXECUTION & INTELLIGENCE SUITE (NEW TOOLS)
-      ============================================================== */}
+      */}
       <section id="suite-overview" className="relative w-full border-b-2 border-[#121212] bg-[#FDFBF7] py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="mixture" opacity={1} />
         <div className="relative z-10 mx-auto max-w-7xl">
@@ -2549,7 +2545,7 @@ function ExplainerSections({
 
               {/* Checkered Border beneath text (Stage 06: Mixture of Solid Orange and Diagonal Black) */}
               <ScrollReveal animation="fade-up" delay={50}>
-                <CheckeredTextRibbon variant="mixture" caption="STAGE 06 / HYBRID MIXTURE" />
+                <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
               </ScrollReveal>
 
               <p className="mt-4 font-sans text-base sm:text-lg text-[#5A564F] leading-relaxed">
@@ -2567,7 +2563,7 @@ function ExplainerSections({
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
-                      <Brain size={20} weight="bold" className="text-[#FF5A26]" />
+                      <Brain size={20} weight="bold" className="text-white" />
                     </div>
                     <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-[#FF5A26]/10 text-[#FF5A26]">
                       MULTI-MODEL AI
@@ -2612,7 +2608,7 @@ function ExplainerSections({
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
-                      <Lightning size={20} weight="bold" className="text-[#FF5A26]" />
+                      <Lightning size={20} weight="bold" className="text-white" />
                     </div>
                     <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-blue-50 text-blue-700">
                       CONCENTRATED AMM
@@ -2657,7 +2653,7 @@ function ExplainerSections({
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
-                      <RadioTower size={20} weight="bold" className="text-[#FF5A26]" />
+                      <RadioTower size={20} weight="bold" className="text-white" />
                     </div>
                     <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-purple-50 text-purple-700">
                       PARALLEL DISPATCH
@@ -2702,7 +2698,7 @@ function ExplainerSections({
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <div className="h-10 w-10 rounded-xl bg-[#121212] text-white flex items-center justify-center">
-                      <Gauge size={20} weight="bold" className="text-[#FF5A26]" />
+                      <Gauge size={20} weight="bold" className="text-white" />
                     </div>
                     <span className="font-mono text-xs font-bold uppercase px-2.5 py-1 rounded bg-emerald-50 text-emerald-700">
                       CLUSTER AUDIT
@@ -2770,12 +2766,11 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: MIXTURE CHECKERED BORDER */}
       <div className="w-full border-b-2 border-[#121212] bg-[#FDFBF7]">
-        <CheckeredBorder variant="mixture" height={16} />
       </div>
 
-      {/* ==============================================================
+      {/*
           EXPLAINER 06: QUICKSTART ROADMAP & CTA (CENTER-ALIGNED)
-      ============================================================== */}
+      */}
       <section className="relative w-full border-b-2 border-[#121212] bg-[#FFFFFF] py-20 sm:py-28 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <CheckeredGridBackground variant="hybrid-cascade" opacity={1} />
         <div className="relative z-10 mx-auto max-w-5xl text-center">
@@ -2798,7 +2793,7 @@ function ExplainerSections({
           {/* Checkered Border beneath text (Stage 07: Grand Cascade Finale) */}
           <div className="flex justify-center">
             <ScrollReveal animation="fade-up" delay={50}>
-              <CheckeredTextRibbon variant="hybrid-cascade" caption="STAGE 07 / CASCADE FINALE" />
+              <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
             </ScrollReveal>
           </div>
 
@@ -2807,7 +2802,7 @@ function ExplainerSections({
           </p>
 
           {/* 3 Step Cards */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             <div className="border-2 border-[#121212] bg-[#FDFBF7] p-6 rounded-2xl">
               <div className="h-8 w-8 rounded-full bg-[#121212] text-white flex items-center justify-center font-mono text-xs font-bold mb-4">
                 01
@@ -2846,14 +2841,14 @@ function ExplainerSections({
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#E84D1C] transition-colors"
             >
               <Play size={16} weight="fill" />
-              <span>Enter Mission Console â†’</span>
+              <span>Enter Mission Console ’</span>
             </button>
 
             <button
               onClick={() => navigateTo("autonomous")}
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#121212] text-white px-8 font-serif text-base font-bold rounded-xl hover:bg-[#FF5A26] transition-colors"
             >
-              <span>Open Autonomous Engine â†’</span>
+              <span>Open Autonomous Engine ’</span>
             </button>
 
             <button
@@ -2861,7 +2856,7 @@ function ExplainerSections({
               className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] text-[#121212] px-8 font-serif text-base font-bold rounded-xl hover:bg-[#F7F4EC] transition-colors"
             >
               <ArrowSquareOut size={16} weight="bold" />
-              <span>View Proof & Evidence â†’</span>
+              <span>View Proof & Evidence ’</span>
             </button>
 
             <button
@@ -2876,7 +2871,6 @@ function ExplainerSections({
 
       {/* SECTION DIVIDER: HYBRID CASCADE FINALE CHECKERED BORDER */}
       <div className="w-full border-t-2 border-[#121212] bg-[#FFFFFF]">
-        <CheckeredBorder variant="hybrid-cascade" height={18} />
       </div>
     </div>
   );
@@ -3261,36 +3255,43 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-[#F7F4EC] text-[#121212] font-serif selection:bg-[#FF5A26] selection:text-white">
+    <main className="sentry-bw min-h-screen bg-[#F7F4EC] text-[#121212] font-serif selection:bg-[#121212] selection:text-white">
       {/* TOP NAV BAR */}
       <header className="sticky top-0 z-50 border-b-2 border-[#121212] bg-[#F7F4EC]/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <button onClick={() => navigateTo("home")} className="flex items-center gap-3 shrink-0 text-left">
-            <div className="h-8 w-8 rounded-full bg-[#121212] flex items-center justify-center text-white font-serif text-sm font-bold">
-              S/
-            </div>
-            <div className="flex flex-col">
+          <button onClick={() => navigateTo("home")} className="flex min-w-0 items-center gap-2 text-left sm:gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden border-2 border-[#121212] bg-black sm:h-10 sm:w-10">
+              <Image
+                src="/Sentry-logo.png"
+                alt="Sentry"
+                width={32}
+                height={32}
+                className="h-7 w-7 object-contain sm:h-8 sm:w-8"
+                priority
+              />
+            </span>
+            <div className="flex min-w-0 flex-col">
               <span className="font-serif font-black text-sm tracking-tight leading-tight">
                 Sentry Stack Co.
               </span>
-              <span className="font-mono text-xs text-[#5A564F]">
+              <span className="break-words font-mono text-[10px] text-[#5A564F] sm:text-xs">
                 /sentry@solami.io
               </span>
             </div>
           </button>
 
-          <nav className="hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
+          <nav className="ml-auto hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
             <a
               href="https://sentry-doc.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#FF5A26] font-bold hover:underline flex items-center gap-1"
+              className="text-[#121212] font-bold hover:underline flex items-center gap-1"
             >
               <span>Docs</span>
             </a>
             <a
               href="/dashboard"
-              className="inline-flex h-9 items-center gap-2 border-2 border-[#121212] bg-[#121212] px-4 font-serif text-xs font-bold text-white rounded-full hover:bg-[#FF5A26] transition-colors shadow-[2px_2px_0px_#121212]"
+              className="inline-flex h-9 items-center gap-2 border-2 border-[#121212] bg-white px-4 font-serif text-xs font-bold text-black rounded-full hover:bg-white hover:text-[#121212] transition-colors shadow-[2px_2px_0px_#121212]"
             >
               <GraduationCap size={14} weight="bold" />
               <span>Get Started</span>
@@ -3309,7 +3310,7 @@ export default function Home() {
               <span>Overview</span>
             </button>
 
-            <span className="text-[#121212]/20 select-none">â€¢</span>
+            <span className="text-[#121212]/20 select-none">¢</span>
 
             {/* Autonomous Engine (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -3380,7 +3381,7 @@ export default function Home() {
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">â€¢</span>
+            <span className="text-[#121212]/20 select-none">¢</span>
 
             {/* Mission Console (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -3425,13 +3426,13 @@ export default function Home() {
                       <span className="font-serif text-xs font-bold text-[#121212]">Lifecycle Stages</span>
                       <span className="font-mono text-xs uppercase px-1.5 py-0.5 rounded bg-[#121212]/5 text-[#5A564F]">FINALITY</span>
                     </div>
-                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Processed â†’ Confirmed â†’ Finalized slot timings</p>
+                    <p className="font-sans text-xs sm:text-sm text-[#5A564F] mt-0.5">Processed ’ Confirmed ’ Finalized slot timings</p>
                   </button>
                 </div>
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">â€¢</span>
+            <span className="text-[#121212]/20 select-none">¢</span>
 
             {/* Intelligence & Audit (Nested Hover Dropdown) */}
             <div className="relative group py-1">
@@ -3492,7 +3493,7 @@ export default function Home() {
               </div>
             </div>
 
-            <span className="text-[#121212]/20 select-none">â€¢</span>
+            <span className="text-[#121212]/20 select-none">¢</span>
 
             {/* Docs Link */}
             <a
@@ -3501,7 +3502,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="text-[#FF5A26] font-bold hover:underline flex items-center gap-1"
             >
-              <span>Docs â†—</span>
+              <span>Docs</span>
             </a>
           </nav>
 
@@ -3543,7 +3544,7 @@ export default function Home() {
             <div className="hidden items-center gap-2 border-2 border-[#121212] bg-[#FFFFFF] px-3 py-1 font-mono text-xs font-semibold rounded-full">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>Mainnet</span>
-              <span className="text-[#121212]/30 select-none">â€¢</span>
+              <span className="text-[#121212]/30 select-none">¢</span>
               <span className="text-[#5A564F]">
                 {snapshot?.balanceSol != null
                   ? `${snapshot.balanceSol.toFixed(4)} SOL`
@@ -3591,14 +3592,69 @@ export default function Home() {
           </div>
         )}
       </header>
-      {/* ================================================================
+      {/* =
           1. HOMEPAGE VIEW: FULLSCREEN HERO + ALTERNATING EXPLAINERS
-      ================================================================ */}
+      = */}
       {activeView === "home" && (
         <>
           <ScrollProgressBar />
+          <section className="w-full border-b-2 border-[#121212] bg-[#FFFFFF]">
+            <div className="mx-auto min-h-[calc(100svh-65px)] max-w-7xl px-4 py-8 sm:px-8 sm:py-10 lg:px-10">
+              <div className="flex items-center justify-start gap-4">
+              </div>
+
+              <div className="relative mt-10 min-h-0 sm:mt-14 lg:min-h-[560px]">
+                <div className="absolute bottom-12 left-0 hidden flex-col justify-end gap-14 lg:flex">
+                  <div>
+                    <span className="rounded-full border-2 border-[#121212] bg-white px-4 py-1 text-[11px] font-bold uppercase">
+                      Directed By
+                    </span>
+                    <p className="mt-3 w-fit rounded-full border-2 border-[#121212] bg-white px-4 py-1 text-[11px] font-bold uppercase">
+                      Sentry Stack
+                    </p>
+                  </div>
+                  <p className="max-w-[160px] text-[11px] font-bold uppercase leading-tight text-[#121212]">
+                    Matrix possession: transaction execution.
+                  </p>
+                </div>
+
+                <div className="relative mx-auto flex min-h-0 max-w-4xl flex-col text-center lg:min-h-[560px]">
+                  <div className="flex items-start justify-center gap-2 sm:gap-3">
+                    <h1 className="max-w-4xl text-[clamp(3.5rem,21vw,9.8rem)] font-normal uppercase leading-[0.78] tracking-normal text-[#121212] sm:leading-[0.72]">
+                      Sentry
+                      <br />
+                      Academy
+                    </h1>
+                    <span className="mt-10 text-lg font-bold sm:mt-24 sm:text-2xl">(01)</span>
+                  </div>
+
+                  <div className="mx-auto mt-6 grid max-w-2xl gap-4 text-center sm:mt-8 sm:grid-cols-2 sm:text-left">
+                    <p className="text-[11px] font-bold uppercase leading-tight">
+                      Blockchain execution training for people who want to understand the machine, not just click the tool.
+                    </p>
+                    <p className="max-w-sm text-[11px] uppercase leading-snug">
+                      Learn slots, blockhashes, fees, transaction lifecycle, failure recovery, liquidity quotes, and multi-rail submission through live labs and quick checks.
+                    </p>
+                  </div>
+
+                  <div className="hidden w-[190px] overflow-hidden rounded-[28px] border-2 border-[#121212] bg-white p-3 shadow-[8px_8px_0px_#121212] lg:absolute lg:bottom-16 lg:right-0 lg:block">
+                    <div className="flex h-28 items-center justify-center rounded-[20px] bg-[#121212] text-white">
+                      <Cpu size={42} weight="bold" />
+                    </div>
+                    <p className="mt-3 text-[10px] font-bold uppercase leading-tight">
+                      Live Devnet labs. Mainnet concepts.
+                    </p>
+                  </div>
+
+              <div className="relative mt-8 border-t-2 border-[#121212] py-2 text-[11px] uppercase tracking-tight md:absolute md:bottom-0 md:left-0 md:right-0 md:mt-0 md:text-xs">
+                    new lesson * live lab * quick quiz * unlock next * devnet test * mainnet context * execution mechanics * 
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
           {/* HERO SECTION: DUAL-TONE SPLIT */}
-      <section className="w-full min-h-[calc(100vh-65px)] border-b-2 border-[#121212] bg-[#FFFFFF]">
+      <section className="hidden w-full min-h-[calc(100vh-65px)] border-b-2 border-[#121212] bg-[#FFFFFF]">
         <div className="w-full min-h-[calc(100vh-65px)] grid lg:grid-cols-[1.15fr_0.85fr]">
           
           {/* LEFT PANEL: Warm Cream Editorial Showcase */}
@@ -3644,7 +3700,7 @@ export default function Home() {
 
               {/* Checkered Border (Stage 01: Solid) */}
               <ScrollReveal animation="fade-up" delay={100}>
-                <CheckeredTextRibbon variant="solid" caption="STAGE 01 / SOLID CHECKS" />
+                <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
               </ScrollReveal>
 
               {/* Editorial Description */}
@@ -3708,19 +3764,19 @@ export default function Home() {
                   </defs>
                   <text className="font-mono text-[9.5px] font-bold tracking-[2px] uppercase fill-current">
                     <textPath xlinkHref="#stampCirclePath">
-                      â€¢ SENTRY 2.0 â€¢ BEAM VERIFIED â€¢ MAINNET RUNS
+                      ¢ SENTRY 2.0 ¢ BEAM VERIFIED ¢ MAINNET RUNS
                     </textPath>
                   </text>
                 </svg>
                 <div className="absolute inset-0 m-auto h-10 w-10 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white">
-                  <Lightning size={18} weight="fill" className="text-[#FF5A26]" />
+                  <Lightning size={18} weight="fill" className="text-white" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* RIGHT PANEL: Vibrant Coral Orange (#FF5A26) with Phosphor Icons */}
-          <div className="relative p-6 sm:p-10 md:p-12 bg-[#FF5A26] border-t-2 lg:border-t-0 lg:border-l-2 border-[#121212] text-[#121212] flex flex-col justify-between overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl">
+          <div className="relative p-6 sm:p-10 md:p-12 bg-[#FF5A26] border-t-2 lg:border-t-0 lg:border-l-2 border-[#121212] text-white flex flex-col justify-between overflow-hidden rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl">
             
             {/* Top row of badges with Phosphor icons */}
             <div className="relative z-10 flex flex-wrap gap-2.5 items-center">
@@ -3771,7 +3827,7 @@ export default function Home() {
               </div>
 
               <div className="flex items-baseline gap-3">
-                <p className="font-serif text-6xl sm:text-7xl lg:text-8xl font-black tracking-tight text-[#121212] leading-none">
+                <p className="font-serif text-5xl sm:text-7xl lg:text-8xl font-black tracking-tight text-white leading-none">
                   {calculatedLandingStats.formattedRate}
                 </p>
                 {calculatedLandingStats.hasData && (
@@ -3780,10 +3836,10 @@ export default function Home() {
                   </span>
                 )}
               </div>
-              <p className="mt-1 font-mono text-sm sm:text-base font-bold uppercase tracking-wider text-[#121212]">
+              <p className="mt-1 font-mono text-sm sm:text-base font-bold uppercase tracking-wider text-white">
                 {matrixNetwork === "mainnet" ? "Solana Mainnet Landing Rate" : "Solana Devnet Landing Rate"}
               </p>
-              <p className="mt-1 font-mono text-xs text-[#5A564F]">
+              <p className="mt-1 font-mono text-xs text-white/80">
                 {calculatedLandingStats.hasData
                   ? calculatedLandingStats.detail
                   : "Calculating dynamically from on-chain lifecycle log..."}
@@ -3806,7 +3862,7 @@ export default function Home() {
               {/* Hand-drawn High Five / Clapping SVG Illustration */}
               <div className="mt-6 flex justify-center lg:justify-start">
                 <svg
-                  className="w-48 h-32 text-[#121212]"
+                  className="w-48 h-32 text-white"
                   viewBox="0 0 200 130"
                   fill="none"
                   stroke="currentColor"
@@ -3857,14 +3913,9 @@ export default function Home() {
         </div>
       </section>
 
-          {/* SECTION DIVIDER: SOLID CHECKERED BORDER (HERO -> EXPLAINERS) */}
-          <div className="w-full border-b-2 border-[#121212] bg-[#F7F4EC]">
-            <CheckeredBorder variant="solid" height={16} />
-          </div>
-
           {/* TRAINING APP POSITIONING */}
-          <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-            <div className="border-2 border-[#121212] bg-[#FDFBF7] rounded-2xl p-6 sm:p-8 shadow-[4px_4px_0px_#121212]">
+          <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12">
+            <div className="border-2 border-[#121212] bg-[#FDFBF7] rounded-2xl p-4 shadow-[4px_4px_0px_#121212] sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-6 border-b-2 border-[#121212]/15 pb-6">
                 <div className="max-w-3xl">
                   <span className="font-mono text-xs font-bold text-[#FF5A26] bg-[#FF5A26]/10 px-2.5 py-0.5 rounded uppercase tracking-wider">
@@ -3948,7 +3999,13 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="text-[#FF5A26] hover:underline"
                 >
-                  Documentation â†—
+                  Documentation
+                </a>
+                <a href="/privacy" className="hover:text-[#FF5A26] transition-colors">
+                  Privacy
+                </a>
+                <a href="/terms" className="hover:text-[#FF5A26] transition-colors">
+                  Terms
                 </a>
               </div>
             </div>
@@ -3956,9 +4013,9 @@ export default function Home() {
         </>
       )}
 
-      {/* ================================================================
+      {/* =
           2. OPERATIONAL VIEWS (ACCESSED VIA NAVBAR / CTAs)
-      ================================================================ */}
+      = */}
       {activeView !== "home" && (
         <div className="relative w-full min-h-screen bg-[#F7F4EC]">
           {/* Persistent Architectural Checkered Drafting Grid with gradient fade across operational pages */}
@@ -3985,7 +4042,7 @@ export default function Home() {
                 className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-[#121212] hover:text-[#FF5A26] transition-colors"
               >
                 <CaretLeft size={14} weight="bold" />
-                <span>â† Return to Home Overview</span>
+                <span>Return to Home Overview</span>
               </button>
 
               <div className="flex items-center gap-1.5 sm:gap-2">
@@ -4044,7 +4101,7 @@ export default function Home() {
                   <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
                     Mission Control & Dispatch
                   </h2>
-                  <CheckeredTextRibbon variant="cross-hatch" caption="STAGE 04 / MISSION DISPATCH & METRICS" />
+                  <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
                 </div>
               </section>
 
@@ -4053,7 +4110,7 @@ export default function Home() {
 
               {/* METRICS OVERVIEW CARDS */}
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           {metrics.map((metric) => (
             <div
               key={`metric-${metric.label}`}
@@ -4131,7 +4188,7 @@ export default function Home() {
                 className="inline-flex h-11 items-center gap-2 border-2 border-[#121212] bg-[#FF5A26] px-6 font-serif text-sm font-bold text-white hover:bg-[#E84D1C] transition-colors disabled:opacity-60"
               >
                 <Play size={16} weight="fill" />
-                {submitting ? "Opening Console..." : "Execute Profile Now â†’"}
+                {submitting ? "Opening Console..." : "Execute Profile Now ’"}
               </button>
               {submitting && (
                 <span className="font-mono text-xs text-[#FF5A26]">
@@ -4166,7 +4223,7 @@ export default function Home() {
               </div>
 
               {/* Architecture Pipeline Stages */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-3">
                 {architectureStages.map((stg) => {
                   const isActive = activeStage.includes(stg.id);
                   return (
@@ -4390,7 +4447,7 @@ export default function Home() {
               </div>
 
               {/* Stages progression */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                 {[
                   { stage: "Processed", time: selectedRun.processed_at },
                   { stage: "Confirmed", time: selectedRun.confirmed_at },
@@ -4442,7 +4499,7 @@ export default function Home() {
                   <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#121212] mt-1">
                     Autonomous Intelligence & Evidence Trail
                   </h2>
-                  <CheckeredTextRibbon variant="mixture" caption="STAGE 06 / GROQ AI & LIQUIDITY MATRIX" />
+                  <div className="my-3.5 h-px max-w-xl bg-[#121212]" />
                 </div>
               </section>
 
@@ -4573,7 +4630,7 @@ export default function Home() {
 
           {/* Left Quote Badge */}
           <div className="absolute -top-5 -left-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            â€œ
+            œ
           </div>
 
           <div className="max-w-4xl my-2">
@@ -4596,7 +4653,7 @@ export default function Home() {
                   <span className="font-mono text-xs font-bold text-[#121212]">100 Runs</span>
                 </div>
                 <p className="font-sans text-xs text-[#5A564F] leading-relaxed">
-                  Real mainnet broadcasts routed through <strong>Solami Beam SWQoS</strong> with dynamic micro-tips (1,000â€“8,000 lamports) and Solana rent-reserve guardrails. Real on-chain signatures verified on Solana Explorer.
+                  Real mainnet broadcasts routed through <strong>Solami Beam SWQoS</strong> with dynamic micro-tips (1,000“8,000 lamports) and Solana rent-reserve guardrails. Real on-chain signatures verified on Solana Explorer.
                 </p>
                 <div className="mt-3 font-mono text-[11px] text-[#121212] bg-white p-2 rounded border border-[#121212]/20">
                   Log: logs/mainnet_100_matrix.jsonl
@@ -4640,7 +4697,7 @@ export default function Home() {
 
           {/* Right Quote Badge */}
           <div className="absolute -bottom-5 -right-3 h-11 w-11 rounded-full bg-[#121212] border-2 border-[#FFFFFF] flex items-center justify-center text-white font-serif text-2xl select-none">
-            â€
+            
           </div>
         </div>
       </section>
@@ -4666,7 +4723,7 @@ export default function Home() {
                   className="border-2 border-[#121212] bg-[#F7F4EC] p-5 rounded-xl"
                 >
                   <div className="h-10 w-10 rounded-lg bg-[#121212] text-white flex items-center justify-center mb-4">
-                    <Icon size={20} weight="bold" className="text-[#FF5A26]" />
+                    <Icon size={20} weight="bold" className="text-white" />
                   </div>
                   <h3 className="font-serif text-base font-bold text-[#121212]">
                     {item.title}
@@ -4700,7 +4757,7 @@ export default function Home() {
                     Bundle Execution Console
                   </h3>
                   <p className="font-mono text-xs text-[#5A564F]">
-                    Profile: {selectedProfile} â€¢ {submitting ? "Streaming live execution..." : "Stream completed"}
+                    Profile: {selectedProfile} ¢ {submitting ? "Streaming live execution..." : "Stream completed"}
                   </p>
                 </div>
               </div>
@@ -4715,7 +4772,7 @@ export default function Home() {
 
             {/* Architecture Pipeline Stages inside Modal */}
             <div className="bg-[#FFFFFF] border-b-2 border-[#121212] p-3">
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {architectureStages.map((stg) => {
                   const isActive = activeStage.includes(stg.id);
                   return (
@@ -4750,7 +4807,7 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="shrink-0 ml-2 border border-emerald-700 bg-white px-3 py-1 font-mono text-xs font-bold rounded-lg hover:bg-emerald-600 hover:text-white transition-colors"
                 >
-                  Explorer â†—
+                  Explorer
                 </a>
               </div>
             )}
@@ -4784,7 +4841,7 @@ export default function Home() {
                 </div>
               ))}
               {submitting && (
-                <div className="text-[#FF5A26] font-mono text-xs pt-1">
+                <div className="text-white font-mono text-xs pt-1">
                   &gt; Solami Beam routing transaction...
                 </div>
               )}
@@ -4820,7 +4877,7 @@ export default function Home() {
                   AI Transaction Analysis
                 </h3>
                 <p className="font-mono text-xs text-[#5A564F]">
-                  Run #{selectedRun.run_number} â€¢ {selectedRun.status}
+                  Run #{selectedRun.run_number} ¢ {selectedRun.status}
                 </p>
               </div>
               <button

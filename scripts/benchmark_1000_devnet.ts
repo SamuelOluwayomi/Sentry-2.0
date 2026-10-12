@@ -9209,7 +9209,7 @@ const SCENARIOS = [
   }
 ] as const;
 
-// ─── Constants 
+//  Constants 
 const DEVNET_RPC = "https://api.devnet.solana.com";
 const TIP_SINK = new PublicKey("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5");
 const MEMO_PROG = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
@@ -9229,7 +9229,7 @@ interface FaultResult { signature: string | null; status: RunStatus; failureClas
 // Ring-buffer of recently broadcast raw transactions (for duplicate_tx injection)
 const rawTxCache: Array<{ rawTx: Buffer; sig: string }> = [];
 
-// ─── Tip calculation 
+//  Tip calculation 
 function computeTip(scenario: typeof SCENARIOS[number]): number {
   const noise = (Math.random() * 2 - 1) * scenario.tipVariance;
   const jitter = Math.floor(Math.random() * 997) + 1;
@@ -9237,10 +9237,10 @@ function computeTip(scenario: typeof SCENARIOS[number]): number {
   return Math.max(5_000, Math.min(tip, 120_000));
 }
 
-// ─── Sleep 
+//  Sleep 
 function sleep(ms: number): Promise<void> { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── Build a normal transfer transaction 
+//  Build a normal transfer transaction 
 function buildTx(keypair: Keypair, blockhash: string, memo: string, lamports: number): Buffer {
   const tx = new Transaction();
   tx.add(
@@ -9257,7 +9257,7 @@ function buildTx(keypair: Keypair, blockhash: string, memo: string, lamports: nu
   return tx.serialize() as Buffer;
 }
 
-// ─── Fault-injected broadcast 
+//  Fault-injected broadcast 
 async function broadcastWithFault(
   conn: Connection,
   keypair: Keypair,
@@ -9292,7 +9292,7 @@ async function broadcastWithFault(
     }
   }
 
-  // ── 3. Preflight simulation failure: transfer 1000 SOL (wallet has ~14) ───
+  // ── 3. Preflight simulation failure: transfer 1000 SOL (wallet has ~14) 
   if (faultType === "preflight_fail") {
     try {
       const { blockhash } = await conn.getLatestBlockhash("confirmed");
@@ -9306,7 +9306,7 @@ async function broadcastWithFault(
     }
   }
 
-  // ── 4. RPC timeout: race sendRawTransaction against 80ms wall-clock ────────
+  // ── 4. RPC timeout: race sendRawTransaction against 80ms wall-clock ──
   //    Devnet round-trips are typically 200-800ms so this reliably fires.
   if (faultType === "rpc_timeout") {
     try {
@@ -9328,7 +9328,7 @@ async function broadcastWithFault(
     }
   }
 
-  // ── 5. Duplicate tx: resend an already-processed raw transaction ──────────
+  // ── 5. Duplicate tx: resend an already-processed raw transaction ─
   if (faultType === "duplicate_tx") {
     if (rawTxCache.length > 0) {
       const cached = rawTxCache[Math.floor(Math.random() * rawTxCache.length)];
@@ -9353,7 +9353,7 @@ async function broadcastWithFault(
     faultType = "none" as FaultType;
   }
 
-  // ── 6. Normal broadcast (faultType === "none") ────────────────────────────
+  // ── 6. Normal broadcast (faultType === "none") ─
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const { blockhash } = await conn.getLatestBlockhash("confirmed");
@@ -9373,7 +9373,7 @@ async function broadcastWithFault(
   return { signature: null, status: "failed", failureClass: "max_retries_exceeded" };
 }
 
-// ─── Cryptographic helpers ────────────────────────────────────────────────────
+//  Cryptographic helpers ─
 function sha256Hex(data: string): string {
   const { createHash } = require("node:crypto");
   return createHash("sha256").update(data, "utf8").digest("hex");
@@ -9385,7 +9385,7 @@ function signReceiptHash(receiptHash: string, secretKey: Uint8Array): string {
   return bs58.encode(sig64);
 }
 
-// ─── Main benchmark ───────────────────────────────────────────────────────────
+//  Main benchmark ──
 async function runHonestBenchmark() {
   const totalScenarios = SCENARIOS.length;
   const faultScenarios = SCENARIOS.filter(s => s.faultType !== "none").length;

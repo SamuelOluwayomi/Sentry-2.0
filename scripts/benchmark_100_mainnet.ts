@@ -8,7 +8,7 @@ import { createHash, createHmac, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-// ─── Keypair loading ──────────────────────────────────────────────────────────
+//  Keypair loading 
 function loadKeypair(): Keypair {
   let priv = "";
   try {
@@ -26,7 +26,7 @@ function loadKeypair(): Keypair {
   return Keypair.fromSecretKey(bs58.decode(priv));
 }
 
-// ─── Scenarios (100 Distinct Mainnet Runs) ───────────────────────────────────
+//  Scenarios (100 Distinct Mainnet Runs) 
 const SCENARIOS = [
   {
     id: "openbook_v2__vol_rebalance",
@@ -931,7 +931,7 @@ const SCENARIOS = [
 ] as const;
 
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+//  Constants 
 function getEnvRpc(): string {
   try {
     const env = fs.readFileSync(path.join(process.cwd(), ".env"), "utf8");
@@ -963,7 +963,7 @@ interface FaultResult { signature: string | null; status: RunStatus; failureClas
 
 const rawTxCache: Array<{ rawTx: Buffer; sig: string }> = [];
 
-// ─── Mainnet Capital-Efficient Tip Calculation ────────────────────────────────
+//  Mainnet Capital-Efficient Tip Calculation 
 function computeTip(scenario: typeof SCENARIOS[number]): number {
   const noise = (Math.random() * 2 - 1) * scenario.tipVariance;
   const jitter = Math.floor(Math.random() * 241) + 1;
@@ -975,7 +975,7 @@ function computeTip(scenario: typeof SCENARIOS[number]): number {
 
 function sleep(ms: number): Promise<void> { return new Promise(r => setTimeout(r, ms)); }
 
-// ─── Build Transaction ────────────────────────────────────────────────────────
+//  Build Transaction 
 function buildTx(keypair: Keypair, blockhash: string, memo: string, lamports: number): Buffer {
   const tx = new Transaction();
   tx.add(
@@ -992,7 +992,7 @@ function buildTx(keypair: Keypair, blockhash: string, memo: string, lamports: nu
   return tx.serialize() as Buffer;
 }
 
-// ─── Fault-injected broadcast on Mainnet ──────────────────────────────────────
+//  Fault-injected broadcast on Mainnet 
 async function broadcastWithFault(
   conn: Connection,
   keypair: Keypair,
@@ -1100,7 +1100,7 @@ async function broadcastWithFault(
   return { signature: null, status: "failed", failureClass: "max_retries_exceeded" };
 }
 
-// ─── Cryptographic Helpers ────────────────────────────────────────────────────
+//  Cryptographic Helpers ──
 function sha256Hex(data: string): string {
   return createHash("sha256").update(data, "utf8").digest("hex");
 }
@@ -1110,7 +1110,7 @@ function signReceiptHash(receiptHash: string, secretKey: Uint8Array): string {
   return bs58.encode(sig64);
 }
 
-// ─── Main Benchmark Runner ────────────────────────────────────────────────────
+//  Main Benchmark Runner ──
 async function runMainnetBenchmark() {
   const keypair = loadKeypair();
   const conn = new Connection(MAINNET_RPC, { commitment: "confirmed" });

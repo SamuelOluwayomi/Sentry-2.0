@@ -146,7 +146,7 @@ async fn main() -> Result<()> {
             (tip, "Sentry | bounty demo", false)
         };
 
-        // ── Yellowstone-first pattern ──────────────────────────────────
+        // ── Yellowstone-first pattern ─
         // Open the gRPC stream BEFORE submitting so we never miss the event.
         // We don't know the signature yet, so we use a placeholder and swap it
         // once build_and_submit_bundle returns. The stream watches by wallet

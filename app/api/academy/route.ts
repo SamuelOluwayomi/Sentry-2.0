@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   const network = body.network;
   if (!isAcademyNetwork(network)) {
-    return NextResponse.json({ error: "network must be 'devnet' or 'testnet'" }, { status: 400 });
+    return NextResponse.json({ error: "network must be 'mainnet', 'devnet' or 'testnet'" }, { status: 400 });
   }
   const params = body.params ?? {};
 

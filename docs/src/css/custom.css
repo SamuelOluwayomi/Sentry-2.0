@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* ==========================================================================
+/* ====
    LIGHT MODE (Default Retro Editorial Theme)
-   ========================================================================== */
+   ==== */
 :root {
   --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Fraunces', Georgia, serif;
@@ -44,9 +44,9 @@
   --ifm-table-border-color: #121212;
 }
 
-/* ==========================================================================
+/* ====
    DARK MODE (Deep Obsidian / Matte Charcoal with High Contrast Legibility)
-   ========================================================================== */
+   ==== */
 [data-theme='dark'] {
   --ifm-font-family-base: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Fraunces', Georgia, serif;

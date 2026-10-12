@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400..800;1,400..800&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -116,7 +116,321 @@
   background-size: 40px 40px;
 }
 
-
 .font-cursive {
   font-family: 'Caveat', 'Fraunces', cursive, Georgia, serif;
 }
+
+@media (max-width: 640px) {
+  .sentry-bw {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .sentry-bw :is(h1, h2, h3, h4, p, span, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .sentry-bw :is(button, a, input, select, textarea) {
+    min-width: 0;
+  }
+
+  .sentry-bw table {
+    min-width: max-content;
+  }
+}
+
+/* SENTRY B&W THEME RULES */
+.sentry-bw.bg-\[\#F7F4EC\],
+.sentry-bw .bg-\[\#F7F4EC\],
+.sentry-bw .bg-\[\#FDFBF7\],
+.sentry-bw .hover\:bg-\[\#F7F4EC\]:hover,
+.sentry-bw .hover\:bg-\[\#FFFFFF\]:hover {
+  background-color: #F7F4EC !important;
+}
+
+.sentry-bw.bg-\[\#FFFFFF\],
+.sentry-bw .bg-\[\#FFFFFF\],
+.sentry-bw .bg-white,
+.sentry-bw [class*="bg-[#FFFFFF]"],
+.sentry-bw [class*="bg-white"]:not([class*="bg-white/"]) {
+  background-color: #FDFBF7 !important;
+}
+
+.sentry-bw .bg-\[\#FF5A26\],
+.sentry-bw .hover\:bg-\[\#FF5A26\]:hover,
+.sentry-bw .bg-\[\#E84D1C\],
+.sentry-bw .hover\:bg-\[\#E84D1C\]:hover {
+  background-color: #24211D !important;
+}
+
+.sentry-bw .bg-\[\#FF5A26\]\/10,
+.sentry-bw .bg-\[\#FF5A26\]\/5 {
+  background-color: rgba(18, 18, 18, 0.08) !important;
+}
+
+.sentry-bw .border-\[\#FF5A26\],
+.sentry-bw .hover\:border-\[\#FF5A26\]:hover {
+  border-color: #121212 !important;
+}
+
+.sentry-bw .shadow-\[2px_2px_0px_\#FF5A26\],
+.sentry-bw .shadow-\[3px_3px_0px_\#FF5A26\],
+.sentry-bw .shadow-\[4px_4px_0px_\#FF5A26\],
+.sentry-bw .shadow-\[5px_5px_0px_\#FF5A26\],
+.sentry-bw .shadow-\[6px_6px_0px_\#FF5A26\] {
+  box-shadow: 4px 4px 0 #121212 !important;
+}
+
+.sentry-bw [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+.sentry-bw [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"]),
+.sentry-bw [class*="hover:bg-[#FF5A26]"]:hover,
+.sentry-bw [class*="hover:bg-[#E84D1C]"]:hover {
+  background-color: #24211D !important;
+}
+
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-black"],
+  .bg-black
+) {
+  background-color: #24211D !important;
+}
+
+.sentry-bw [class*="bg-[#F7F4EC]"],
+.sentry-bw [class*="bg-[#FDFBF7]"] {
+  background-color: #F7F4EC !important;
+}
+
+/* Preference pass: quieter UI, fewer decorative effects, no pure white panels. */
+.sentry-bw [class*="shadow-"] {
+  box-shadow: none !important;
+}
+
+.sentry-bw :is([class*="rounded-2xl"], [class*="rounded-xl"], [class*="rounded-lg"]) {
+  border-radius: 8px !important;
+}
+
+.sentry-bw :is([class*="transition"], [class*="animate-"]) {
+  transition: none !important;
+  animation: none !important;
+}
+
+.sentry-bw :is([class*="hover:translate"], [class*="active:translate"], [class*="group-hover:rotate"]) {
+  transform: none !important;
+}
+
+.sentry-bw :is(
+  .fixed.pointer-events-none.select-none,
+  .bg-drafting-grid
+) {
+  display: none !important;
+}
+
+/* Ensure buttons and controls maintain crisp text contrast */
+.sentry-bw button.text-white,
+.sentry-bw button[class*="text-white"],
+.sentry-bw a.text-white,
+.sentry-bw a[class*="text-white"],
+.sentry-bw button[class*="bg-[#121212]"],
+.sentry-bw button[class*="bg-[#24211D]"],
+.sentry-bw button[class*="bg-[#FF5A26]"],
+.sentry-bw button[class*="bg-[#E84D1C]"] {
+  color: #FFFFFF !important;
+}
+.sentry-bw button.text-white *,
+.sentry-bw button[class*="text-white"] * {
+  color: #FFFFFF !important;
+}
+
+.sentry-bw [class*="border-[#FF5A26]"],
+.sentry-bw [class*="hover:border-[#FF5A26]"]:hover {
+  border-color: #121212 !important;
+}
+
+/* Light background: accent and muted text turn dark */
+.sentry-bw .text-\[\#FF5A26\],
+.sentry-bw .hover\:text-\[\#FF5A26\]:hover,
+.sentry-bw .text-\[\#5A564F\],
+.sentry-bw [class*="text-[#FF5A26]"],
+.sentry-bw [class*="hover:text-[#FF5A26]"]:hover {
+  color: #121212 !important;
+}
+
+/* CRITICAL READABILITY RULE: On any black/dark background, make ALL text and icons WHITE so they are 100% visible */
+.sentry-bw [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+.sentry-bw [class*="bg-[#090909]"],
+.sentry-bw [class*="bg-[#000000]"],
+.sentry-bw [class*="bg-black"],
+.sentry-bw .bg-black,
+.sentry-bw .editorial-terminal,
+.sentry-bw [class*="bg-[#0E1117]"],
+.sentry-bw [class*="bg-[#0A0D14]"],
+.sentry-bw [class*="bg-[#080B11]"],
+.sentry-bw [class*="bg-[#0D111A]"],
+.sentry-bw [class*="bg-[#161B22]"],
+.sentry-bw [class*="bg-[#161B26]"],
+.sentry-bw [class*="bg-[#05070B]"],
+.sentry-bw [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+.sentry-bw [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"]) {
+  color: #FFFFFF !important;
+}
+
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-[#090909]"],
+  [class*="bg-[#000000]"],
+  [class*="bg-black"],
+  .bg-black,
+  .editorial-terminal,
+  [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+  [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"])
+) :is(
+  h1, h2, h3, h4, h5, h6,
+  p, span, strong, a, button, label, code, pre, svg,
+  [class*="text-[#FF5A26]"],
+  [class*="text-[#5A564F]"],
+  [class*="text-[#121212]"],
+  .text-black,
+  [class*="text-black"]
+) {
+  color: #FFFFFF !important;
+}
+
+/* Ensure all SVG and Phosphor icons inside dark surfaces are bright white */
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-[#090909]"],
+  [class*="bg-[#000000]"],
+  [class*="bg-black"],
+  .bg-black,
+  .editorial-terminal,
+  [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+  [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"])
+) :is(
+  svg,
+  svg path,
+  svg circle,
+  svg rect
+) {
+  color: #FFFFFF !important;
+  stroke: currentColor;
+  fill: currentColor;
+}
+
+/* If a light box/badge is nested inside a dark surface, keep its text readable dark (EXCLUDING dark terminals/IDEs) */
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-[#090909]"],
+  [class*="bg-[#000000]"],
+  [class*="bg-black"],
+  .bg-black,
+  .editorial-terminal,
+  [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+  [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"])
+) :is(
+  [class*="bg-[#FFFFFF]"],
+  [class*="bg-white"]:not([class*="bg-white/"]),
+  [class*="bg-[#FDFBF7]"],
+  [class*="bg-[#F7F4EC]"]
+):not([data-dark="true"]):not([data-ide="true"]):not([data-terminal="true"]) {
+  color: #121212 !important;
+}
+
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-[#090909]"],
+  [class*="bg-[#000000]"],
+  [class*="bg-black"],
+  .bg-black,
+  .editorial-terminal,
+  [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+  [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"])
+) :is(
+  [class*="bg-[#FFFFFF]"],
+  [class*="bg-white"]:not([class*="bg-white/"]),
+  [class*="bg-[#FDFBF7]"],
+  [class*="bg-[#F7F4EC]"]
+):not([data-dark="true"]):not([data-ide="true"]):not([data-terminal="true"]) :is(
+  h1:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  h2:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  h3:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  h4:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  p:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  span:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  strong:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  a:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  code:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  pre:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *),
+  [class*="text-[#121212]"]:not([data-dark="true"] *):not([data-ide="true"] *):not([data-terminal="true"] *)
+) {
+  color: #121212 !important;
+}
+
+.sentry-bw :is(
+  [class*="bg-[#121212]"]:not([class*="bg-[#121212]/"]),
+  [class*="bg-[#090909]"],
+  [class*="bg-[#000000]"],
+  [class*="bg-black"],
+  .bg-black,
+  .editorial-terminal,
+  [class*="bg-[#FF5A26]"]:not([class*="bg-[#FF5A26]/"]),
+  [class*="bg-[#E84D1C]"]:not([class*="bg-[#E84D1C]/"])
+) :is(
+  [class*="bg-[#FFFFFF]"],
+  [class*="bg-white"]:not([class*="bg-white/"]),
+  [class*="bg-[#FDFBF7]"],
+  [class*="bg-[#F7F4EC]"]
+) :is(
+  [class*="text-[#5A564F]"]
+) {
+  color: #5A564F !important;
+}
+
+/* Close Dialogue and Action Button contrast */
+.sentry-bw button[class*="bg-[#121212]"],
+.sentry-bw button[class*="!bg-[#121212]"] {
+  background-color: #121212 !important;
+  color: #FFFFFF !important;
+}
+.sentry-bw button[class*="bg-[#121212]"] *,
+.sentry-bw button[class*="!bg-[#121212]"] * {
+  color: #FFFFFF !important;
+}
+
+/* ===========================================================================
+   BULLETPROOF VISIBILITY RULES FOR IDE CODE & CLI TERMINAL
+   =========================================================================== */
+
+/* Global IDE & Terminal base text */
+.sentry-bw [data-ide="true"],
+.sentry-bw [data-ide="true"] *,
+.sentry-bw [data-terminal="true"],
+.sentry-bw [data-terminal="true"] * {
+  color: #F0F6FC !important;
+}
+
+/* Syntax Highlighting Tokens in IDE */
+.sentry-bw [data-ide="true"] .tok-kw { color: #FF7B72 !important; font-weight: 700 !important; }
+.sentry-bw [data-ide="true"] .tok-fn { color: #79C0FF !important; font-weight: 600 !important; }
+.sentry-bw [data-ide="true"] .tok-str { color: #7EE787 !important; }
+.sentry-bw [data-ide="true"] .tok-type { color: #FFA657 !important; font-weight: 700 !important; }
+.sentry-bw [data-ide="true"] .tok-num { color: #D2A8FF !important; font-weight: 600 !important; }
+.sentry-bw [data-ide="true"] .tok-comment { color: #8B949E !important; font-style: italic !important; }
+.sentry-bw [data-ide="true"] .tok-ident { color: #F0F6FC !important; }
+.sentry-bw [data-ide="true"] .tok-punct { color: #C9D1D9 !important; }
+.sentry-bw [data-ide="true"] .tok-line-num { color: #6E7681 !important; }
+
+/* CLI Terminal Tokens */
+.sentry-bw [data-terminal="true"] .term-prompt { color: #34D399 !important; font-weight: 700 !important; }
+.sentry-bw [data-terminal="true"] .term-cmd { color: #F9FAFB !important; font-weight: 600 !important; }
+.sentry-bw [data-terminal="true"] .term-variant { color: #FBBF24 !important; font-weight: 600 !important; }
+.sentry-bw [data-terminal="true"] .term-desc { color: #D1D5DB !important; }
+.sentry-bw [data-terminal="true"] .term-pass { color: #34D399 !important; font-weight: 700 !important; }
+.sentry-bw [data-terminal="true"] .term-run { color: #FBBF24 !important; font-weight: 700 !important; }
+.sentry-bw [data-terminal="true"] .term-que { color: #9CA3AF !important; }
+.sentry-bw [data-terminal="true"] .term-label { color: #F3F4F6 !important; }
+.sentry-bw [data-terminal="true"] .term-sub { color: #FDE047 !important; }
+.sentry-bw [data-terminal="true"] .term-stdout { color: #34D399 !important; font-weight: 700 !important; }
+.sentry-bw [data-terminal="true"] .term-explorer { color: #38BDF8 !important; text-decoration: underline !important; }
+.sentry-bw [data-terminal="true"] .term-btn-text { color: #000000 !important; font-weight: 900 !important; }

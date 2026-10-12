@@ -101,7 +101,7 @@ export function TaskDialogModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -109,22 +109,22 @@ export function TaskDialogModal({
       aria-modal="true"
     >
       <div
-        className={`flex h-full max-h-[85vh] w-full ${maxWidth} flex-col border-2 border-[#121212] bg-[#FDFBF7] rounded-2xl shadow-[6px_6px_0px_#121212] overflow-hidden`}
+        className={`flex h-[94svh] max-h-[94svh] w-full ${maxWidth} flex-col border-2 border-[#121212] bg-[#FDFBF7] rounded-t-2xl shadow-[6px_6px_0px_#121212] overflow-hidden sm:h-full sm:max-h-[85vh] sm:rounded-2xl`}
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b-2 border-[#121212] bg-[#FFFFFF] px-5 py-4">
-          <div className="flex flex-col gap-0.5 pr-4">
-            <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center justify-between border-b-2 border-[#121212] bg-[#FFFFFF] px-4 py-3 sm:px-5 sm:py-4">
+          <div className="min-w-0 flex flex-col gap-0.5 pr-3 sm:pr-4">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
               <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[#FF5A26] bg-[#FF5A26]/10 px-2 py-0.5 rounded">
                 {tag}
               </span>
               {statusBadge()}
             </div>
-            <h3 className="font-serif text-lg sm:text-xl font-bold text-[#121212] leading-tight">
+            <h3 className="font-serif text-base sm:text-xl font-bold text-[#121212] leading-tight">
               {title}
             </h3>
             {subtitle && (
-              <p className="font-mono text-xs text-[#5A564F] mt-0.5">
+              <p className="font-mono text-[11px] sm:text-xs text-[#5A564F] mt-0.5">
                 {subtitle}
               </p>
             )}
@@ -132,7 +132,7 @@ export function TaskDialogModal({
 
           <button
             onClick={onClose}
-            className="border-2 border-[#121212] bg-[#FFFFFF] p-1.5 rounded-xl hover:bg-[#FF5A26] hover:text-white transition-colors shrink-0"
+            className="border-2 border-[#121212] bg-white p-1.5 rounded-xl hover:bg-[#FF5A26] hover:text-white transition-colors shrink-0"
             title="Close dialogue"
           >
             <X size={18} weight="bold" />
@@ -140,13 +140,13 @@ export function TaskDialogModal({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5">
           {children}
         </div>
 
         {/* Modal Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-[#121212] bg-[#FFFFFF] px-5 py-3.5">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-[#121212] bg-[#FFFFFF] px-4 py-3 sm:px-5 sm:py-3.5">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
             {status === "running" && onCancel && (
               <button
                 onClick={onCancel}
@@ -160,9 +160,10 @@ export function TaskDialogModal({
 
           <button
             onClick={onClose}
-            className="border-2 border-[#121212] bg-[#121212] text-white px-5 py-1.5 font-serif text-xs font-bold rounded-xl hover:bg-[#FF5A26] transition-colors ml-auto"
+            style={{ backgroundColor: "#121212", color: "#FFFFFF" }}
+            className="min-h-10 border-2 border-[#121212] !bg-[#121212] !text-white px-6 py-2 font-mono text-xs font-black uppercase tracking-wider rounded-xl hover:!bg-[#FF5A26] transition-colors ml-auto shadow-[2px_2px_0px_#121212]"
           >
-            Close Dialogue
+            <span style={{ color: "#FFFFFF" }} className="!text-white font-mono text-xs font-bold">Close Dialogue</span>
           </button>
         </div>
       </div>

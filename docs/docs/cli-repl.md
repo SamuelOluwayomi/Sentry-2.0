@@ -26,9 +26,9 @@ Run this command to verify environment health against live Solana Mainnet-Beta:
 ```bash
 $ npm run check:live
 
-========================================================================
+==
  SENTRY 2.0: 5-SECOND LIVE MAINNET DIAGNOSTIC CHECK
-========================================================================
+==
  Target Network:  Solana Mainnet-Beta
  RPC Endpoint:    https://rpc.solami.dev/sol
  Cluster Check:   Verified Mainnet-Beta (Slot 454129841)
@@ -39,7 +39,7 @@ $ npm run check:live
  Usable Balance:  1,489,040 lamports (0.001489 SOL)
  Cuckoo Filter:   Active (Sub-50ns Preflight Deduplication)
  Engine Signing:  Ed25519 (TweetNaCl) [VERIFIED]
-========================================================================
+==
 STATUS: ALL SYSTEMS OPERATIONAL (0 ERRORS DETECTED)
 ```
 

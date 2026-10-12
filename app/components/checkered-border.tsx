@@ -44,10 +44,10 @@ export function CheckeredBorder({
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* =========================================================
+          {/* =
               1. VARIANT: SOLID (Section 1 / Hero)
               Checkered boxes fully shaded in alternating black & orange
-              ========================================================= */}
+              = */}
           {variant === "solid" && (
             <pattern
               id={patternId}
@@ -67,10 +67,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               2. VARIANT: DIAGONAL-LINES (Section 2 / Explainer 01)
               Checkered boxes shaded with 45° diagonal lines
-              ========================================================= */}
+              = */}
           {variant === "diagonal-lines" && (
             <pattern
               id={patternId}
@@ -110,10 +110,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               3. VARIANT: DIAGONAL-REVERSE (Section 3 / Explainer 02)
               Checkered boxes shaded with reverse -45° diagonal lines (135°)
-              ========================================================= */}
+              = */}
           {variant === "diagonal-reverse" && (
             <pattern
               id={patternId}
@@ -153,10 +153,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               4. VARIANT: CROSS-HATCH (Section 4 / Explainer 03)
               Checkered boxes shaded with intersecting cross-hatch diagonals
-              ========================================================= */}
+              = */}
           {variant === "cross-hatch" && (
             <pattern
               id={patternId}
@@ -196,10 +196,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               5. VARIANT: DIAGONAL-DENSE (Section 5 / Explainer 04)
               High-density fine diagonal razor stripes
-              ========================================================= */}
+              = */}
           {variant === "diagonal-dense" && (
             <pattern
               id={patternId}
@@ -251,10 +251,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               6. VARIANT: MIXTURE (Section 6 / Explainer 05)
               The Mixture: Solid orange + Black diagonal lines combined!
-              ========================================================= */}
+              = */}
           {variant === "mixture" && (
             <pattern
               id={patternId}
@@ -303,10 +303,10 @@ export function CheckeredBorder({
             </pattern>
           )}
 
-          {/* =========================================================
+          {/* =
               7. VARIANT: HYBRID-CASCADE (Section 7 / Explainer 06)
               Grand Finale: Alternating solid hazard check & dual-tone hatch
-              ========================================================= */}
+              = */}
           {variant === "hybrid-cascade" && (
             <pattern
               id={patternId}
