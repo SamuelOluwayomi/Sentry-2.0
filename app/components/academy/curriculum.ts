@@ -3,7 +3,7 @@
 // check understanding, then run a live lab on devnet or testnet.
 
 export type AcademyView = "home" | "console" | "autonomous" | "intelligence";
-export type LabNetwork = "devnet" | "testnet";
+export type LabNetwork = "mainnet" | "devnet" | "testnet";
 
 export type LabId =
   | "pulse"
@@ -527,11 +527,11 @@ export const LESSONS: Lesson[] = [
     ],
     lab: {
       id: "orca-quote",
-      title: "Quote a Devnet Whirlpool",
+      title: "Quote an Orca Whirlpool",
       description:
-        "Read the live SOL / devUSDC Whirlpool on devnet and quote a swap through the Orca SDK: spot price, ticks, fee, price impact and minimum output.",
+        "Read the live SOL / USDC Whirlpool on mainnet or SOL / devUSDC on devnet and quote a swap: spot price, ticks, fee, price impact and minimum output.",
       actionLabel: "Get Quote",
-      networks: ["devnet"],
+      networks: ["mainnet", "devnet"],
       spendsSol: false,
       stages: [
         "Load the Whirlpool account",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { RANKS, MAX_XP, XP, LESSONS, Lesson, AcademyView } from "./curriculum";
 
-export type AcademyCluster = "devnet" | "testnet";
+export type AcademyCluster = "mainnet" | "devnet" | "testnet";
 
 export interface AcademyProgress {
   activeCluster: AcademyCluster;
@@ -15,7 +15,7 @@ export interface AcademyProgress {
 const STORAGE_KEY = "sentry_academy_progress_v1";
 
 const DEFAULT_PROGRESS: AcademyProgress = {
-  activeCluster: "devnet",
+  activeCluster: "mainnet",
   readLessonIds: [],
   quizAnswers: {},
   completedLabs: {},
