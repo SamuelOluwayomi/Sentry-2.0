@@ -7,19 +7,28 @@ sidebar_position: 3
 
 Solami is an enterprise-grade Solana infrastructure provider built to deliver ultra-low latency, high reliability, and guaranteed transaction delivery under adverse network conditions.
 
-Sentry 2.0 is designed from the ground up to utilize Solami's comprehensive suite of developer services:
+Sentry 2.0 is designed from the ground up with Solami as its primary data path across the entire transaction lifecycle:
 
 ```text
-                           +----------------------------------------+
-                           |           Solami Infrastructure        |
-                           +----------------------------------------+
-                                        /       |       \
-                                       /        |        \
-                                      v         v         v
-                         +---------------+  +-------+  +-----------------+
-                         |  Private RPC  |  |  Beam |  | Dynamic Tip API |
-                         | (Slot Polling)|  |(SWQoS)|  |  (...beam sinks)|
-                         +---------------+  +-------+  +-----------------+
+                               +------------------------------------------+
+                               |       Solami Infrastructure Data Path    |
+                               +------------------------------------------+
+                                      /        |         |        \
+            +------------------------+         |         |         +-----------------------+
+            |                                  |         |                                 |
+            v                                  v         v                                 v
+   +-------------------+              +-------------+  +---------------+         +-------------------+
+   |    Private RPC    |              |  Beam SWQoS |  |  Blur Streams |         |  Yellowstone gRPC |
+   |  (Slot Polling /  |              | (TPU Direct |  |  (Pre-Block   |         |   (Transaction &  |
+   |   Simulations)    |              |  Execution) |  |   DEX Feed)   |         |    Slot Firehose) |
+   +-------------------+              +-------------+  +---------------+         +-------------------+
+            |                                  |                 |                         |
+            +----------------------------------+-----------------+-------------------------+
+                                               |
+                                    +---------------------+
+                                    | Dynamic Tip Oracle  |
+                                    |  (...beam sinks)    |
+                                    +---------------------+
 ```
 
 ---
@@ -29,7 +38,7 @@ Sentry 2.0 is designed from the ground up to utilize Solami's comprehensive suit
 Standard public RPC endpoints suffer from severe rate limits, delayed slot observation, and frequent 429 errors. Solami Private RPC provides dedicated, high-throughput nodes with sub-millisecond response times.
 
 ### Operational Roles in Sentry 2.0
-1. **High-Frequency Slot Progression**: Polled continuously every 400ms to maintain real-time slot synchronization.
+1. **High-Frequency Slot Progression**: Polled continuously to maintain real-time slot synchronization and detect slot drift across clusters.
 2. **Compute Unit Preflight Simulation**: Every transaction is pre-simulated against live on-chain state to verify instruction validity and catch errors before broadcasting.
 3. **Blockhash Sampling**: Samples the freshest cluster blockhash immediately before signing to maximize the 150-slot inclusion window.
 4. **Rent-Reserve Tracking**: Monitors wallet balances before every execution to protect the SIMD-0047 rent exemption floor (650,240 lamports).
@@ -47,7 +56,7 @@ Solami Beam provides **Stake-Weighted Quality of Service (SWQoS)** transaction l
 - Drastically reduces transaction drops during high-volatility DEX liquidation races and token launches.
 
 ### Beam Failover Architecture
-Sentry 2.0 uses a dual-rail dispatch model. If the Beam SWQoS endpoint encounters an intermittent network timeout, the action engine automatically falls back to the Solami Private RPC rail with zero dropped transactions.
+Sentry 2.0 uses a dual-rail dispatch model (`lib/action-engine.ts`). If the Beam SWQoS endpoint encounters an intermittent network timeout, the action engine automatically races or falls back to the Solami Private RPC rail with zero dropped transactions.
 
 ---
 
@@ -61,25 +70,46 @@ GET https://api.solami.dev/onchain/tip-addresses
 ```
 
 ### Dynamic Tip Pipeline
-1. Sentry discovers the active Solami Beam tip accounts (ending in `...beam`).
+1. Sentry discovers active Solami Beam tip accounts (ending in `...beam`).
 2. The dynamic tip engine queries current 50th, 75th, and 95th percentile fee rates.
 3. Depending on the classified market regime (`calm`, `moderate`, `congested`, `extreme`, `volatile`), Sentry dynamically scales the tip amount.
 4. An instruction transferring the calculated priority tip is atomically prepended to the transaction package.
 
 ---
 
-## 5. Yellowstone gRPC & Native WebSocket
+## 5. Solami Blur WebSocket (`wss://blur.solami.dev/ws`)
 
-For microsecond-precision confirmation tracking, Sentry 2.0 supports Yellowstone gRPC streaming alongside Solami's native WebSocket (`wss://ws.solami.dev/ws/sol`).
+High-frequency algorithmic operators cannot wait for full block finalization to detect market regime shifts. Solami Blur provides a real-time pre-block streaming feed:
 
-### Capabilities
+### Capabilities in Sentry 2.0 (`lib/blur-stream.ts`)
+- **Pre-Block DEX Swap Decoding**: Streams raw liquidity pool trades across Raydium CPMM/AMM, Orca Whirlpools, and Meteora DLMM in real time.
+- **Sub-Slot Price Impact Tracking**: Feeds price volatility metrics directly into Sentry's regime classifier (`lib/network-snapshot.ts`).
+- **Slot Synchronization**: Maintains local `currentSlot` via `setBlurSlot()` to tag events with microsecond precision.
+- **Autonomous Trigger Signal**: Emits verified events to trigger autonomous transaction actions before pool reserves rebalance.
+
+---
+
+## 6. Yellowstone gRPC & Native WebSocket
+
+For microsecond-precision confirmation tracking, Sentry 2.0 supports Yellowstone gRPC streaming (`grpc.solami.dev`) alongside Solami's native WebSocket (`wss://ws.solami.dev/ws/sol`).
+
+### Capabilities (`lib/yellowstone-stream.ts`)
 - **Slot Pulse Streaming**: Real-time emission of newly observed slots at the `processed` commitment level.
 - **Transaction Signature Subscriptions**: Instantaneous notification when a transaction reaches `confirmed` (supermajority consensus) without polling RPC.
 - **Zero-Allocation Deserialization**: High-speed binary protocol buffers reduce CPU overhead on high-throughput nodes.
 
 ---
 
-## 6. Solami Cluster Consistency & Head Slot Lead
+## 7. Solami Webhook Alerting (`webhook.solami.dev`)
+
+Sentry 2.0 incorporates webhook event dispatch (`lib/webhook-notifier.ts`) to provide autonomous external observability:
+- **Circuit Breaker Activations**: Instant alerts when high slippage or unmanageable congestion triggers the circuit breaker.
+- **Tip Escalation Surges**: Notifications when the dynamic tip engine detects a 95th-percentile fee spike.
+- **Landing Discrepancy Reports**: Webhook dispatches when dual-rail verification detects validator queue anomalies.
+
+---
+
+## 8. Solami Cluster Consistency & Head Slot Lead
 
 To empirically validate Solami's low-latency performance against public RPC infrastructure, Sentry 2.0 incorporates a continuous multi-node consistency diagnostic (`lib/rpc-consistency.ts`):
 

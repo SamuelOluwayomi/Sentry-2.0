@@ -1,5 +1,5 @@
 ---
-sidebar_position: 10
+sidebar_position: 12
 ---
 # Sentry 1 vs Sentry 2.0: Complete Evolution
 
