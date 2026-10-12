@@ -119,6 +119,11 @@ const config: Config = {
           label: 'Documentation',
         },
         {
+          href: 'https://sentryacademy.vercel.app/',
+          label: 'Live App',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/SamuelOluwayomi/Sentry-2.0',
           label: 'GitHub',
           position: 'right',
@@ -129,11 +134,32 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
               label: 'System Overview',
               to: '/docs/system-overview',
+            },
+            {
+              label: 'Sentry Academy & Labs',
+              to: '/docs/academy-labs',
+            },
+            {
+              label: 'Solami Infrastructure',
+              to: '/docs/solami-infra',
+            },
+          ],
+        },
+        {
+          title: 'Links',
+          items: [
+            {
+              label: 'Live Application',
+              href: 'https://sentryacademy.vercel.app/',
+            },
+            {
+              label: 'GitHub Repository',
+              href: 'https://github.com/SamuelOluwayomi/Sentry-2.0',
             },
           ],
         },

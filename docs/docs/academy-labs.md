@@ -5,7 +5,7 @@ sidebar_position: 9
 
 ## 1. Overview
 
-The **Sentry Academy** (accessible via `/dashboard`) is an interactive, browser-native developer curriculum and testing laboratory designed to teach, verify, and benchmark high-performance Solana transaction execution using Solami's data infrastructure.
+The **Sentry Academy** (accessible at [https://sentryacademy.vercel.app/dashboard](https://sentryacademy.vercel.app/dashboard) or locally via `/dashboard`) is an interactive, browser-native developer curriculum and testing laboratory designed to teach, verify, and benchmark high-performance Solana transaction execution using Solami's data infrastructure.
 
 Unlike static documentation, each academy lesson pairs verified technical theory with:
 1. **Interactive IDE Code Viewer**: Real-time syntax-highlighted TypeScript implementation with clean tab headers, copy-to-clipboard, and line numbers.

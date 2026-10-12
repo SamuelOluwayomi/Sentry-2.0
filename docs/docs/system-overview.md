@@ -3,6 +3,11 @@ sidebar_position: 1
 ---
 # System Overview
 
+:::tip Quick Links & Live Application
+- **Live Web Application & Academy:** [https://sentryacademy.vercel.app/](https://sentryacademy.vercel.app/)
+- **GitHub Repository:** [https://github.com/SamuelOluwayomi/Sentry-2.0](https://github.com/SamuelOluwayomi/Sentry-2.0)
+:::
+
 ## 1. Introduction to Sentry 2.0
 
 Sentry 2.0 is an autonomous, low-latency Solana transaction execution engine built to solve the execution reliability crisis in high-congestion on-chain environments. 
