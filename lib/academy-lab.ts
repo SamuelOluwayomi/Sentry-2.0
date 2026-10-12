@@ -11,9 +11,12 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
+  Transaction,
   TransactionMessage,
   VersionedTransaction,
+  sendAndConfirmTransaction,
 } from "@solana/web3.js";
+import bs58 from "bs58";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -243,7 +246,21 @@ export async function labWallet(network: AcademyNetwork) {
   };
 }
 
-/** Lesson 2: faucet airdrop. Public faucets are rate limited; errors are expected and explained. */
+const DEDICATED_FAUCET_KEY =
+  process.env.FAUCET_PRIVATE_KEY ||
+  process.env.DEVNET_FAUCET_PRIVATE_KEY ||
+  "29RAXBmSvLrDc8iuLwAkshS9MuuXX5ZM2GcMSPoaMF23Q9Uk9MPkmkg4GPLMdj6S5aBNiEDh5BRa76dvbAE9FpTV";
+
+function getFaucetKeypair(): Keypair | null {
+  try {
+    if (!DEDICATED_FAUCET_KEY) return null;
+    return Keypair.fromSecretKey(bs58.decode(DEDICATED_FAUCET_KEY.trim()));
+  } catch {
+    return null;
+  }
+}
+
+/** Lesson 2: faucet airdrop. Uses dedicated Sentry faucet vault to prevent public 429 rate-limiting. */
 export async function labAirdrop(network: AcademyNetwork, target?: string) {
   if (network === "mainnet") {
     return {
@@ -255,7 +272,45 @@ export async function labAirdrop(network: AcademyNetwork, target?: string) {
   const connection = primaryConnection(network);
   const recipient = target ? new PublicKey(target) : kp.publicKey;
   const before = await connection.getBalance(recipient, "confirmed");
-  const amount = network === "devnet" ? 0.5 : 1;
+  const amount = network === "devnet" ? 0.25 : 0.5;
+
+  // 1. First, attempt transfer from the dedicated Faucet Vault (immune to public 429 rate limits)
+  const faucetKp = getFaucetKeypair();
+  if (faucetKp && network === "devnet") {
+    try {
+      const faucetBal = await connection.getBalance(faucetKp.publicKey, "confirmed");
+      const requiredLamports = Math.round(amount * LAMPORTS_PER_SOL);
+      if (faucetBal > requiredLamports + 10_000) {
+        const tx = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: faucetKp.publicKey,
+            toPubkey: recipient,
+            lamports: requiredLamports,
+          })
+        );
+        const signature = await sendAndConfirmTransaction(connection, tx, [faucetKp], {
+          commitment: "confirmed",
+        });
+        const after = await connection.getBalance(recipient, "confirmed");
+        return {
+          ok: true,
+          network,
+          recipient: recipient.toBase58(),
+          signature,
+          amountSol: amount,
+          beforeSol: before / LAMPORTS_PER_SOL,
+          afterSol: after / LAMPORTS_PER_SOL,
+          faucetSource: "sentry_vault_faucet",
+          faucetVault: faucetKp.publicKey.toBase58(),
+          explorer: explorerUrl("tx", signature, network),
+        };
+      }
+    } catch (faucetErr) {
+      console.warn("[Faucet] Vault transfer error, falling back to public requestAirdrop:", faucetErr);
+    }
+  }
+
+  // 2. Fallback to standard requestAirdrop
   try {
     const signature = await connection.requestAirdrop(recipient, amount * LAMPORTS_PER_SOL);
     const latest = await connection.getLatestBlockhash("confirmed");
@@ -269,6 +324,7 @@ export async function labAirdrop(network: AcademyNetwork, target?: string) {
       amountSol: amount,
       beforeSol: before / LAMPORTS_PER_SOL,
       afterSol: after / LAMPORTS_PER_SOL,
+      faucetSource: "public_cluster_faucet",
       explorer: explorerUrl("tx", signature, network),
     };
   } catch (err) {

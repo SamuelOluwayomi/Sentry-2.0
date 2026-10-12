@@ -207,7 +207,7 @@ export const LESSONS: Lesson[] = [
       stages: [
         "Load the isolated sandbox keypair",
         "Read the starting balance",
-        "Call requestAirdrop on the faucet",
+        "Request funds from Sentry Faucet Vault",
         "Confirm the airdrop and re-read the balance",
       ],
     },
