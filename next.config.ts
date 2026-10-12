@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     "@orca-so/common-sdk",
     "@coral-xyz/anchor",
     "decimal.js",
+    "@triton-one/yellowstone-grpc",
   ],
 };
 
