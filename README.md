@@ -586,6 +586,14 @@ Surfaces the four advanced execution subsystems:
 - **Orca Whirlpool DEX Swap Terminal**: Live token pair selector, buy/sell direction toggle, swap amount, slippage boundary, and direct execution through Solami Beam SWQoS.
 - **Dual-Rail Live Submission Stream**: Real-time Server-Sent Events stream showing winning landing rails (`BEAM`, `JITO`, `RPC`), confirmation durations, and Solscan verification links.
 
+### 8.5 Sentry Academy & Interactive Developer Lab (`/dashboard`)
+Interactive, browser-based education and testing suite for Solana operators:
+- **7 Comprehensive Curriculum Modules**: Covering Cluster Pulse & Health, Dynamic Tip Oracles, Cuckoo Deduplication Guards, Orca Whirlpool DEX Swaps, Multi-Node RPC Consistency, Dual-Rail Landing Races, and Devnet Airdrop Faucets.
+- **IDE Code Viewer**: Developer-grade syntax-highlighted code editor with tab headers, line numbers, and one-click copy feedback.
+- **CLI Terminal Test Runner (`CliLabRunner`)**: Authentic command-line test runner executing live RPC calls, displaying progress badges (`[✓ PASS]`, `[▶ RUN]`, `[· QUE]`), and live stdout telemetry with clickable Solana Explorer links.
+- **Dual-Cluster Support**: Runs by default on **Mainnet-Beta** for zero-latency network telemetry and slot benchmarking, with an instant toggle to **Devnet** for transaction dispatch and test harnesses.
+- **Progress Tracking & Quizzes**: Theory reviews, interactive knowledge checks, and live test lab requirements tracked per module.
+
 ---
 
 ## 9. Project Structure
@@ -658,4 +666,4 @@ GROQ_API_KEY=your_groq_key
 - **Autonomous Execution Engine**: Sub-millisecond market regime classification, multi-model AI provider cascade (Groq LPU -> Anthropic -> Gemini -> OpenAI -> Heuristic), and dual-rail simultaneous transaction landing.
 - **RPC Cluster Benchmarking**: Continuous multi-node consistency diagnostics measuring empirical slot head advance of Solami Private RPC over public nodes.
 - **Empirical Evidence**: Dual benchmark matrices (100 Mainnet runs + 1,020 Devnet stress runs) with SHA-256 hash-chain provenance and Ed25519 cryptographic signatures.
-- **Observatory Dashboard & Docs**: Interactive Next.js 16 UI with comprehensive execution tools panel, verified Docusaurus technical documentation, and full MIT open source codebase.
+- **Observatory Dashboard, Academy & Docs**: Interactive Next.js 16 UI with comprehensive execution tools panel, Sentry Academy interactive lab with IDE & CLI test runners, verified Docusaurus technical documentation, and full MIT open source codebase.
