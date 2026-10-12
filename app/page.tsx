@@ -3282,7 +3282,7 @@ export default function Home() {
 
           <nav className="ml-auto hidden lg:flex items-center gap-5 font-serif text-sm font-medium text-[#121212]">
             <a
-              href="https://sentry-doc.vercel.app/"
+              href="https://sentryacademydocs.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#121212] font-bold hover:underline flex items-center gap-1"
@@ -3497,7 +3497,7 @@ export default function Home() {
 
             {/* Docs Link */}
             <a
-              href="https://sentry-doc.vercel.app/"
+              href="https://sentryacademydocs.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#FF5A26] font-bold hover:underline flex items-center gap-1"
@@ -3582,7 +3582,7 @@ export default function Home() {
               Get Started
             </a>
             <a
-              href="https://sentry-doc.vercel.app/"
+              href="https://sentryacademydocs.vercel.app/"
               target="_blank"
               rel="noopener noreferrer"
               className="flex h-11 w-full items-center justify-center rounded-xl border-2 border-[#121212] bg-white px-4 font-serif text-sm font-bold text-[#FF5A26]"
@@ -3721,7 +3721,7 @@ export default function Home() {
                 </a>
 
                 <a
-                  href="https://sentry-doc.vercel.app/"
+                  href="https://sentryacademydocs.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-12 items-center gap-2 border-2 border-[#121212] bg-[#F7F4EC] px-5 font-serif text-sm font-semibold text-[#121212] hover:bg-[#FFFFFF] transition-colors"
@@ -3994,7 +3994,7 @@ export default function Home() {
                   Intelligence & Proof
                 </button>
                 <a
-                  href="https://sentry-doc.vercel.app/"
+                  href="https://sentryacademydocs.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#FF5A26] hover:underline"

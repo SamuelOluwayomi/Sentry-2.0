@@ -302,7 +302,7 @@ export default function DashboardPage() {
 
               <div className="border-t-2 border-[#121212] p-3 sm:p-4">
                 <a
-                  href="https://sentry-doc.vercel.app/"
+                  href="https://sentryacademydocs.vercel.app/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-10 w-full items-center justify-center rounded-xl border-2 border-[#121212] bg-white font-mono text-xs font-bold text-[#FF5A26] hover:bg-[#F7F4EC]"
