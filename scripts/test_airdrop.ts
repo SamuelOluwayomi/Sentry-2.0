@@ -1,4 +1,4 @@
-import { labAirdrop } from "./lib/academy-lab";
+import { labAirdrop } from "../lib/academy-lab";
 
 async function test() {
   console.log("Testing labAirdrop('devnet')...");
